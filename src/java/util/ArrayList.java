@@ -974,8 +974,11 @@ public class ArrayList<E> extends AbstractList<E> implements List<E>, RandomAcce
 	}
 
 	/**
-	 * 支持lambda表达式
+	 * 后面的几个都是支持lambda表达式的
 	 */
+	
+	
+	
 	@Override
 	public void forEach(Consumer<? super E> action) {
 		Objects.requireNonNull(action);
