@@ -1,4 +1,3 @@
-
 package java.util;
 
 import java.util.function.Consumer;
@@ -6,37 +5,31 @@ import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
 import sun.misc.SharedSecrets;
 
-
 /**
- *	底层数据接口是数组
- *	适合查找
- *	不适合对具体下标数据的删除和修改  时间复杂度为O(N)
- *	删除和修改极有可能涉及数据的扩容，移动
+ *	底层数据接口是数组 线程不安全
+ *	适合随机查找 
+ *	不适合大量的新增和删除 极有可能涉及数组的移动
  */
 public class ArrayList<E> extends AbstractList<E> implements List<E>, RandomAccess, Cloneable, java.io.Serializable {
 	private static final long serialVersionUID = 8683452581122892189L;
 
 	/**
-	 * 默认集合的大小 10
+	 * 默认数组的容量 10
 	 */
 	private static final int DEFAULT_CAPACITY = 10;
 
 	/**
-	 * 空数组 用户初始化
-	 * EMPTY_ELEMENTDATA 当构造的入参initialCapacity为0时
-	 * DEFAULTCAPACITY_EMPTY_ELEMENTDATA 无参构造 程序默认赋值
-	 * 
+	 * 空数组
 	 */
 	private static final Object[] EMPTY_ELEMENTDATA = {};
 
 	/**
-	 * 默认的空数组 程序默认初始化的数组
+	 * 默认容量为0数组
 	 */
 	private static final Object[] DEFAULTCAPACITY_EMPTY_ELEMENTDATA = {};
 
 	/**
-	 * 对象数组 存放数据的结构  
-	 * transient 表示序列化时会忽略
+	 * 存放数据的结构 数组 序列化时会忽略
 	 */
 	transient Object[] elementData;
 
@@ -44,11 +37,11 @@ public class ArrayList<E> extends AbstractList<E> implements List<E>, RandomAcce
 	 * 集合大小
 	 */
 	private int size;
-	// Arrays.copyOf底层由System.arraycopy实现
-	// System.arraycopy 需要了解一下 用的特别多
-	//src 源数组；srcPos 源数组复制的起始下标；dest 目标数组；destPos 目标数组起始下标；length 复制的长度
+
+	// Arrays.copyOf 需要特别说明一下 在ArrayList中用的特别多  底层由System.arraycopy实现
+	// System.arraycopy 需要特别说明一下 在ArrayList中用的特别多
+	//src 源数组     srcPos 源数组要复制的起始下标位置  dest 目标数组    destPos 目标数组起始下标位置  length 要复制的长度
 	//System.arraycopy(src, srcPos, dest, destPos, length);
-	//一句话解释  从源数组的srcPos下标开始的length个数，每个数据项移动|destPos-srcPos|位
 	/**
 	 * 
 	 * @param initialCapacity 初始化数组的大小
@@ -90,16 +83,21 @@ public class ArrayList<E> extends AbstractList<E> implements List<E>, RandomAcce
 	}
 
 	/**
-	 * 数组扩容
+	 * 
+	 * @Title: 得到一个安全的数组容量
+	 * @Description:
+	 * @Author daiyangyang
+	 * @DateTime 2019年6月27日 下午4:51:06
+	 * @param minCapacity
 	 */
 	public void ensureCapacity(int minCapacity) {
 
 		// 获取到一个最小扩容大小
-		// 如果elementData是程序默认初始化的DEFAULTCAPACITY_EMPTY_ELEMENTDATA minExpand=DEFAULT_CAPACITY
-		// 否者minExpand=0
+		// 如果elementData不是默认容量为0的数组（DEFAULTCAPACITY_EMPTY_ELEMENTDATA） minExpand=0
+		// 否者minExpand=10
 		int minExpand = (elementData != DEFAULTCAPACITY_EMPTY_ELEMENTDATA) ? 0 : DEFAULT_CAPACITY;
 
-		if (minCapacity > minExpand) {// 所需的最小容量大于当前数组容量
+		if (minCapacity > minExpand) {// 所需的最小容量 大于当前数组容量
 			ensureExplicitCapacity(minCapacity);
 		}
 	}
@@ -108,7 +106,7 @@ public class ArrayList<E> extends AbstractList<E> implements List<E>, RandomAcce
 	 *  根据原数组和所需的最小容量大小计算所需的最小容量大小
 	 */
 	private static int calculateCapacity(Object[] elementData, int minCapacity) {
-		if (elementData == DEFAULTCAPACITY_EMPTY_ELEMENTDATA) {//如果是程序默认初始化的数组
+		if (elementData == DEFAULTCAPACITY_EMPTY_ELEMENTDATA) {//如果是默认容量为0数组
 			return Math.max(DEFAULT_CAPACITY, minCapacity);//返回 minCapacity和DEFAULT_CAPACITY中的较大的一个
 		}
 		return minCapacity;
@@ -125,28 +123,34 @@ public class ArrayList<E> extends AbstractList<E> implements List<E>, RandomAcce
 	 */
 	private void ensureExplicitCapacity(int minCapacity) {
 		modCount++;//修改次数加一
-		
+
+		// overflow-conscious code
 		if (minCapacity - elementData.length > 0)// 所需的最小容量大小大于当前数组的大小
-			grow(minCapacity);//数组扩容
+			grow(minCapacity);// 数组扩容
 	}
 
 	/**
-	 * 数组的最大大小 最大可以取到Integer.MAX_VALUE
+	 * 数组的最大大小
 	 */
 	private static final int MAX_ARRAY_SIZE = Integer.MAX_VALUE - 8;
 
 	/**
-	 * 真正扩容的地方
+	 * 
+	 * @Title: 扩容
+	 * @Description:
+	 * @Author daiyangyang
+	 * @DateTime 2019年6月27日 下午5:08:52
 	 * @param minCapacity 所需的最小容量
 	 */
 	private void grow(int minCapacity) {
+		// overflow-conscious code
 		int oldCapacity = elementData.length;// 当前容量
 		// 相当于 newCapacity = 1.5 * oldCapacity
 		int newCapacity = oldCapacity + (oldCapacity >> 1);
 		if (newCapacity - minCapacity < 0)
 			newCapacity = minCapacity;
-		if (newCapacity - MAX_ARRAY_SIZE > 0)//当比MAX_ARRAY_SIZE还要大时
-			newCapacity = hugeCapacity(minCapacity);//Integer.MAX_VALUE 
+		if (newCapacity - MAX_ARRAY_SIZE > 0)
+			newCapacity = hugeCapacity(minCapacity);
 		// 将当前数组中的数据copy到长度为newCapacity的新数组中 elementData指向新的数组
 		elementData = Arrays.copyOf(elementData, newCapacity);
 	}
@@ -182,9 +186,7 @@ public class ArrayList<E> extends AbstractList<E> implements List<E>, RandomAcce
 	}
 
 	/**
-	 * 返回对象在数组中的下标 
-	 * 存在 返回对象在数组中的下标 
-	 * 不存在 则返回-1
+	 * 返回存在对象在数组中的下标 不存在则返回-1
 	 */
 	public int indexOf(Object o) {
 		if (o == null) {
@@ -200,9 +202,7 @@ public class ArrayList<E> extends AbstractList<E> implements List<E>, RandomAcce
 	}
 
 	/**
-	 * 返回存在对象在数组中的最大下标 从数组末尾开始遍历 
-	 * 存在 返回对象在数组中的最大下标 
-	 * 不存在 则返回-1
+	 * 返回存在对象在数组中的最大下标 从数组末尾开始遍历 equals相等 立马返回
 	 */
 	public int lastIndexOf(Object o) {
 		if (o == null) {
@@ -243,8 +243,29 @@ public class ArrayList<E> extends AbstractList<E> implements List<E>, RandomAcce
 	}
 
 	/**
-	 * 返回一个数据类型为T新数组
+	 * Returns an array containing all of the elements in this list in proper
+	 * sequence (from first to last element); the runtime type of the returned array
+	 * is that of the specified array. If the list fits in the specified array, it
+	 * is returned therein. Otherwise, a new array is allocated with the runtime
+	 * type of the specified array and the size of this list.
+	 *
+	 * <p>
+	 * If the list fits in the specified array with room to spare (i.e., the array
+	 * has more elements than the list), the element in the array immediately
+	 * following the end of the collection is set to <tt>null</tt>. (This is useful
+	 * in determining the length of the list <i>only</i> if the caller knows that
+	 * the list does not contain any null elements.)
+	 *
+	 * @param a the array into which the elements of the list are to be stored, if
+	 *          it is big enough; otherwise, a new array of the same runtime type is
+	 *          allocated for this purpose.
+	 * @return an array containing the elements of the list
+	 * @throws ArrayStoreException  if the runtime type of the specified array is
+	 *                              not a supertype of the runtime type of every
+	 *                              element in this list
+	 * @throws NullPointerException if the specified array is null
 	 */
+	@SuppressWarnings("unchecked")
 	public <T> T[] toArray(T[] a) {
 		if (a.length < size)
 			// Make a new array of a's runtime type, but my contents:
@@ -267,7 +288,7 @@ public class ArrayList<E> extends AbstractList<E> implements List<E>, RandomAcce
 	 * 获取下标为index的数据
 	 */
 	public E get(int index) {
-		rangeCheck(index);// 数组越界校验
+		rangeCheck(index);// 下标范围的校验
 
 		return elementData(index);// 获取下标为index的数据
 	}
@@ -297,9 +318,9 @@ public class ArrayList<E> extends AbstractList<E> implements List<E>, RandomAcce
 	 * 在index位置添加数据
 	 */
 	public void add(int index, E element) {
-		rangeCheckForAdd(index);//数组越界校验 下标不能大于等于当前集合大小且下标不能小于0
+		rangeCheckForAdd(index);//检测是否越界 下标不能大于等于当前集合大小且下标不能小于0
 
-		ensureCapacityInternal(size + 1); // 数组扩容处理
+		ensureCapacityInternal(size + 1); // 数组扩容
 		//数组自身移动  从index下标开始的(size - index)个数  每个数据的下标向后移动一位  下标index正好空出来
 		System.arraycopy(elementData, index, elementData, index + 1, size - index);
 		elementData[index] = element;//赋值
@@ -310,7 +331,7 @@ public class ArrayList<E> extends AbstractList<E> implements List<E>, RandomAcce
 	 * 删除下标为index的数据
 	 */
 	public E remove(int index) {
-		rangeCheck(index);//数组越界校验 下标不能大于等于当前集合大小
+		rangeCheck(index);//检测是否越界 下标不能大于等于当前集合大小
 
 		modCount++;//修改次数加一
 		E oldValue = elementData(index);//获取旧值
@@ -354,7 +375,7 @@ public class ArrayList<E> extends AbstractList<E> implements List<E>, RandomAcce
 		int numMoved = size - index - 1;
 		if (numMoved > 0)//数组自身移动  从(index+1)下标开始的numMoved个数  每个数据的下标向前移动一位  下标(size-1)正好空出来
 			System.arraycopy(elementData, index + 1, elementData, index, numMoved);
-		elementData[--size] = null; // 赋null 有助于gc
+		elementData[--size] = null; // 赋null 之前指向的数据会被垃圾回收器处理
 	}
 
 	/**
@@ -364,7 +385,7 @@ public class ArrayList<E> extends AbstractList<E> implements List<E>, RandomAcce
 	public void clear() {
 		modCount++;
 
-		// 有助于gc
+		// clear to let GC do its work
 		for (int i = 0; i < size; i++)
 			elementData[i] = null;
 
@@ -423,14 +444,24 @@ public class ArrayList<E> extends AbstractList<E> implements List<E>, RandomAcce
 	}
 
 	/**
-	 * 移除一段范围内的数据
+	 * Removes from this list all of the elements whose index is between
+	 * {@code fromIndex}, inclusive, and {@code toIndex}, exclusive. Shifts any
+	 * succeeding elements to the left (reduces their index). This call shortens the
+	 * list by {@code (toIndex - fromIndex)} elements. (If
+	 * {@code toIndex==fromIndex}, this operation has no effect.)
+	 *
+	 * @throws IndexOutOfBoundsException if {@code fromIndex} or {@code toIndex} is
+	 *                                   out of range ({@code fromIndex < 0 ||
+	 *          fromIndex >= size() ||
+	 *          toIndex > size() ||
+	 *          toIndex < fromIndex}  )
 	 */
 	protected void removeRange(int fromIndex, int toIndex) {
 		modCount++;
 		int numMoved = size - toIndex;
 		System.arraycopy(elementData, toIndex, elementData, fromIndex, numMoved);
 
-		// 有助于gc
+		// clear to let GC do its work
 		int newSize = size - (toIndex - fromIndex);
 		for (int i = newSize; i < size; i++) {
 			elementData[i] = null;
@@ -439,7 +470,7 @@ public class ArrayList<E> extends AbstractList<E> implements List<E>, RandomAcce
 	}
 
 	/**
-	 * 数组越界校验 下标不能大于等于当前集合大小
+	 * 检测是否越界 下标不能大于等于当前集合大小
 	 */
 	private void rangeCheck(int index) {
 		if (index >= size)// 下标不能大于等于当前集合大小
@@ -447,7 +478,7 @@ public class ArrayList<E> extends AbstractList<E> implements List<E>, RandomAcce
 	}
 
 	/**
-	 * 数组越界校验 下标不能大于等于当前集合大小且下标不能小于0
+	 * 检测是否越界 下标不能大于等于当前集合大小且下标不能小于0
 	 */
 	private void rangeCheckForAdd(int index) {
 		if (index > size || index < 0)
@@ -455,14 +486,30 @@ public class ArrayList<E> extends AbstractList<E> implements List<E>, RandomAcce
 	}
 
 	/**
-	 * 数据越界异常语句
+	 * Constructs an IndexOutOfBoundsException detail message. Of the many possible
+	 * refactorings of the error handling code, this "outlining" performs best with
+	 * both server and client VMs.
 	 */
 	private String outOfBoundsMsg(int index) {
 		return "Index: " + index + ", Size: " + size;
 	}
 
 	/**
-	 * 移除数组中存在于集合c中的数据
+	 * Removes from this list all of its elements that are contained in the
+	 * specified collection.
+	 *
+	 * @param c collection containing elements to be removed from this list
+	 * @return {@code true} if this list changed as a result of the call
+	 * @throws ClassCastException   if the class of an element of this list is
+	 *                              incompatible with the specified collection
+	 *                              (<a href=
+	 *                              "Collection.html#optional-restrictions">optional</a>)
+	 * @throws NullPointerException if this list contains a null element and the
+	 *                              specified collection does not permit null
+	 *                              elements (<a href=
+	 *                              "Collection.html#optional-restrictions">optional</a>),
+	 *                              or if the specified collection is null
+	 * @see Collection#contains(Object)
 	 */
 	public boolean removeAll(Collection<?> c) {
 		Objects.requireNonNull(c);
@@ -470,7 +517,22 @@ public class ArrayList<E> extends AbstractList<E> implements List<E>, RandomAcce
 	}
 
 	/**
-	 * 
+	 * Retains only the elements in this list that are contained in the specified
+	 * collection. In other words, removes from this list all of its elements that
+	 * are not contained in the specified collection.
+	 *
+	 * @param c collection containing elements to be retained in this list
+	 * @return {@code true} if this list changed as a result of the call
+	 * @throws ClassCastException   if the class of an element of this list is
+	 *                              incompatible with the specified collection
+	 *                              (<a href=
+	 *                              "Collection.html#optional-restrictions">optional</a>)
+	 * @throws NullPointerException if this list contains a null element and the
+	 *                              specified collection does not permit null
+	 *                              elements (<a href=
+	 *                              "Collection.html#optional-restrictions">optional</a>),
+	 *                              or if the specified collection is null
+	 * @see Collection#contains(Object)
 	 */
 	public boolean retainAll(Collection<?> c) {
 		Objects.requireNonNull(c);
@@ -558,7 +620,7 @@ public class ArrayList<E> extends AbstractList<E> implements List<E>, RandomAcce
 	}
 
 	/**
-	 * 将下标index及以后的数据生成ListIterator对象
+	 * 将下标index及以后的数据生成ListIterator
 	 * ListIterator 继承Iterator  可以向前查询 删除数据
 	 * 而且可以向后查找 添加数据  获取数据的下标
 	 */
@@ -586,7 +648,7 @@ public class ArrayList<E> extends AbstractList<E> implements List<E>, RandomAcce
 	}
 
 	/**
-	 * 内部实现Iterator
+	 * An optimized version of AbstractList.Itr
 	 */
 	private class Itr implements Iterator<E> {
 		int cursor; // index of next element to return
@@ -654,7 +716,7 @@ public class ArrayList<E> extends AbstractList<E> implements List<E>, RandomAcce
 	}
 
 	/**
-	 * 内部实现ListIterator
+	 * An optimized version of AbstractList.ListItr
 	 */
 	private class ListItr extends Itr implements ListIterator<E> {
 		ListItr(int index) {
@@ -715,14 +777,8 @@ public class ArrayList<E> extends AbstractList<E> implements List<E>, RandomAcce
 	}
 
 	/**
-	 * 生成一个SubList对象 当前的Arraylist会被作为一个属性
-	 * 阿里java开发手册说道
-	 * 2.   【强制】ArrayList的subList结果不可强转成ArrayList，否则会抛出ClassCastException 异常：
-	 * java.util.RandomAccessSubList cannot be cast to java.util.ArrayList; 
-	 * 说明：subList 返回的是 ArrayList 的内部类 SubList，并不是 ArrayList ，而是 ArrayList 的一个视图，
-	 * 对于SubList子列表的所有操作最终会反映到原列表上。
-	 * 3.   【强制】在subList场景中，高度注意对原集合元素个数的修改，
-	 * 	会导致子列表的遍历、增加、删除均产生ConcurrentModificationException 异常。
+	 * 	生成一个SubList对象 当前的Arraylist会被作为一个属性
+	 * 	这里要去看下阿里java开发手册
 	 */
 	public List<E> subList(int fromIndex, int toIndex) {
 		subListRangeCheck(fromIndex, toIndex, size);
@@ -730,7 +786,7 @@ public class ArrayList<E> extends AbstractList<E> implements List<E>, RandomAcce
 	}
 
 	/**
-	 * 数组越界校验  以及fromIndex和toIndex是否非法的校验
+	 * 数组下标越界校验  以及fromIndex和toIndex是否非法的校验
 	 */
 	static void subListRangeCheck(int fromIndex, int toIndex, int size) {
 		if (fromIndex < 0)
@@ -741,10 +797,6 @@ public class ArrayList<E> extends AbstractList<E> implements List<E>, RandomAcce
 			throw new IllegalArgumentException("fromIndex(" + fromIndex + ") > toIndex(" + toIndex + ")");
 	}
 
-	/**
-	 * SubList内部持有当前的ArrayList对象
-	 *
-	 */
 	private class SubList extends AbstractList<E> implements RandomAccess {
 		private final AbstractList<E> parent;
 		private final int parentOffset;
@@ -974,11 +1026,8 @@ public class ArrayList<E> extends AbstractList<E> implements List<E>, RandomAcce
 	}
 
 	/**
-	 * 后面的几个都是支持lambda表达式的
+	 * 支持lambda表达式
 	 */
-	
-	
-	
 	@Override
 	public void forEach(Consumer<? super E> action) {
 		Objects.requireNonNull(action);
