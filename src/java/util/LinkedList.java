@@ -401,7 +401,7 @@ public class LinkedList<E>
     }
 
     /**
-     * 	获取index位置的Node 为降低时间复杂度  用了一次二分查找
+     * 	获取index位置的Node 为降低时间复杂度  用了二分查找
      */
     Node<E> node(int index) {
         if (index < (size >> 1)) {//下标小于size的一半 就从头节点向后开始遍历

@@ -6,15 +6,15 @@ import java.util.function.UnaryOperator;
 import sun.misc.SharedSecrets;
 
 /**
- *	底层数据接口是数组 线程不安全
- *	适合随机查找 
- *	不适合大量的新增和删除 极有可能涉及数组的移动
+ *	底层由数组实现 线程不安全
+ *	适合随机查找、更新(通过下标 时间复杂度为O(1))
+ *	不适合大量的新增、删除(涉及数组的移动)
  */
 public class ArrayList<E> extends AbstractList<E> implements List<E>, RandomAccess, Cloneable, java.io.Serializable {
 	private static final long serialVersionUID = 8683452581122892189L;
 
 	/**
-	 * 默认数组的容量 10
+	 * 默认容量 10
 	 */
 	private static final int DEFAULT_CAPACITY = 10;
 
@@ -24,12 +24,12 @@ public class ArrayList<E> extends AbstractList<E> implements List<E>, RandomAcce
 	private static final Object[] EMPTY_ELEMENTDATA = {};
 
 	/**
-	 * 默认容量为0数组
+	 * 默认长度为0数组
 	 */
 	private static final Object[] DEFAULTCAPACITY_EMPTY_ELEMENTDATA = {};
 
 	/**
-	 * 存放数据的结构 数组 序列化时会忽略
+	 * 对象数组 存放数据的结构  序列化时会忽略
 	 */
 	transient Object[] elementData;
 
@@ -43,7 +43,7 @@ public class ArrayList<E> extends AbstractList<E> implements List<E>, RandomAcce
 	//src 源数组     srcPos 源数组要复制的起始下标位置  dest 目标数组    destPos 目标数组起始下标位置  length 要复制的长度
 	//System.arraycopy(src, srcPos, dest, destPos, length);
 	/**
-	 * 
+	 * 根据initialCapacity初始化elementData
 	 * @param initialCapacity 初始化数组的大小
 	 */
 	public ArrayList(int initialCapacity) {
@@ -57,21 +57,23 @@ public class ArrayList<E> extends AbstractList<E> implements List<E>, RandomAcce
 			throw new IllegalArgumentException("Illegal Capacity: " + initialCapacity);
 		}
 	}
-
+	/**
+	 * elementData默认长度为0数组
+	 */
 	public ArrayList() {
-		// 初始化个空数组
 		this.elementData = DEFAULTCAPACITY_EMPTY_ELEMENTDATA;
 	}
-
+	/**
+	 * 直接把elementData指向集合转成的数组
+	 * @param c 集合
+	 */
 	public ArrayList(Collection<? extends E> c) {
-		elementData = c.toArray();
-		if ((size = elementData.length) != 0) {
-			// c.toArray might (incorrectly) not return Object[] (see 6260652)
-			if (elementData.getClass() != Object[].class)
+		elementData = c.toArray();//把elementData指向集合转成的数组
+		if ((size = elementData.length) != 0) {//如果用户传入的集合不为空
+			if (elementData.getClass() != Object[].class)//数组的类型不是对象数组就要copy一份原数组到对象数组类型
 				elementData = Arrays.copyOf(elementData, size, Object[].class);
 		} else {
-			// replace with empty array.
-			this.elementData = EMPTY_ELEMENTDATA;
+			this.elementData = EMPTY_ELEMENTDATA;//空数组
 		}
 	}
 
@@ -135,12 +137,7 @@ public class ArrayList<E> extends AbstractList<E> implements List<E>, RandomAcce
 	private static final int MAX_ARRAY_SIZE = Integer.MAX_VALUE - 8;
 
 	/**
-	 * 
-	 * @Title: 扩容
-	 * @Description:
-	 * @Author daiyangyang
-	 * @DateTime 2019年6月27日 下午5:08:52
-	 * @param minCapacity 所需的最小容量
+	 * 扩容
 	 */
 	private void grow(int minCapacity) {
 		// overflow-conscious code
@@ -277,7 +274,7 @@ public class ArrayList<E> extends AbstractList<E> implements List<E>, RandomAcce
 	}
 
 	/**
-	 * 内部使用 获取下标为index的数据
+	 * 获取下标为index的数据
 	 */
 	@SuppressWarnings("unchecked")
 	E elementData(int index) {
