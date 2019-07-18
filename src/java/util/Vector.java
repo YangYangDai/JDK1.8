@@ -1,28 +1,3 @@
-/*
- * Copyright (c) 1994, 2013, Oracle and/or its affiliates. All rights reserved.
- * ORACLE PROPRIETARY/CONFIDENTIAL. Use is subject to license terms.
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- */
-
 package java.util;
 
 import java.util.function.Consumer;
@@ -30,87 +5,26 @@ import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
 
 /**
- * The {@code Vector} class implements a growable array of
- * objects. Like an array, it contains components that can be
- * accessed using an integer index. However, the size of a
- * {@code Vector} can grow or shrink as needed to accommodate
- * adding and removing items after the {@code Vector} has been created.
- *
- * <p>Each vector tries to optimize storage management by maintaining a
- * {@code capacity} and a {@code capacityIncrement}. The
- * {@code capacity} is always at least as large as the vector
- * size; it is usually larger because as components are added to the
- * vector, the vector's storage increases in chunks the size of
- * {@code capacityIncrement}. An application can increase the
- * capacity of a vector before inserting a large number of
- * components; this reduces the amount of incremental reallocation.
- *
- * <p><a name="fail-fast">
- * The iterators returned by this class's {@link #iterator() iterator} and
- * {@link #listIterator(int) listIterator} methods are <em>fail-fast</em></a>:
- * if the vector is structurally modified at any time after the iterator is
- * created, in any way except through the iterator's own
- * {@link ListIterator#remove() remove} or
- * {@link ListIterator#add(Object) add} methods, the iterator will throw a
- * {@link ConcurrentModificationException}.  Thus, in the face of
- * concurrent modification, the iterator fails quickly and cleanly, rather
- * than risking arbitrary, non-deterministic behavior at an undetermined
- * time in the future.  The {@link Enumeration Enumerations} returned by
- * the {@link #elements() elements} method are <em>not</em> fail-fast.
- *
- * <p>Note that the fail-fast behavior of an iterator cannot be guaranteed
- * as it is, generally speaking, impossible to make any hard guarantees in the
- * presence of unsynchronized concurrent modification.  Fail-fast iterators
- * throw {@code ConcurrentModificationException} on a best-effort basis.
- * Therefore, it would be wrong to write a program that depended on this
- * exception for its correctness:  <i>the fail-fast behavior of iterators
- * should be used only to detect bugs.</i>
- *
- * <p>As of the Java 2 platform v1.2, this class was retrofitted to
- * implement the {@link List} interface, making it a member of the
- * <a href="{@docRoot}/../technotes/guides/collections/index.html">
- * Java Collections Framework</a>.  Unlike the new collection
- * implementations, {@code Vector} is synchronized.  If a thread-safe
- * implementation is not needed, it is recommended to use {@link
- * ArrayList} in place of {@code Vector}.
- *
- * @author  Lee Boynton
- * @author  Jonathan Payne
- * @see Collection
- * @see LinkedList
- * @since   JDK1.0
+ * 底层由数组实现的 线程安全
+ * 关键方法上都加上了synchronized 并发安全但为此开销也会大  
+ * 不推荐使用
  */
 public class Vector<E>
     extends AbstractList<E>
     implements List<E>, RandomAccess, Cloneable, java.io.Serializable
 {
     /**
-     * The array buffer into which the components of the vector are
-     * stored. The capacity of the vector is the length of this array buffer,
-     * and is at least large enough to contain all the vector's elements.
-     *
-     * <p>Any array elements following the last element in the Vector are null.
-     *
-     * @serial
+     * 对象数组
      */
     protected Object[] elementData;
 
     /**
-     * The number of valid components in this {@code Vector} object.
-     * Components {@code elementData[0]} through
-     * {@code elementData[elementCount-1]} are the actual items.
-     *
-     * @serial
+     * 数据的数量
      */
     protected int elementCount;
 
     /**
-     * The amount by which the capacity of the vector is automatically
-     * incremented when its size becomes greater than its capacity.  If
-     * the capacity increment is less than or equal to zero, the capacity
-     * of the vector is doubled each time it needs to grow.
-     *
-     * @serial
+     * 每次扩容的大小
      */
     protected int capacityIncrement;
 
@@ -118,14 +32,9 @@ public class Vector<E>
     private static final long serialVersionUID = -2767605614048989439L;
 
     /**
-     * Constructs an empty vector with the specified initial capacity and
-     * capacity increment.
      *
-     * @param   initialCapacity     the initial capacity of the vector
-     * @param   capacityIncrement   the amount by which the capacity is
-     *                              increased when the vector overflows
-     * @throws IllegalArgumentException if the specified initial capacity
-     *         is negative
+     * @param   initialCapacity     初始化数组大小
+     * @param   capacityIncrement   扩容时增加的大小
      */
     public Vector(int initialCapacity, int capacityIncrement) {
         super();
@@ -137,68 +46,41 @@ public class Vector<E>
     }
 
     /**
-     * Constructs an empty vector with the specified initial capacity and
-     * with its capacity increment equal to zero.
-     *
-     * @param   initialCapacity   the initial capacity of the vector
-     * @throws IllegalArgumentException if the specified initial capacity
-     *         is negative
      */
     public Vector(int initialCapacity) {
         this(initialCapacity, 0);
     }
 
     /**
-     * Constructs an empty vector so that its internal data array
-     * has size {@code 10} and its standard capacity increment is
-     * zero.
+     * 
      */
     public Vector() {
         this(10);
     }
 
     /**
-     * Constructs a vector containing the elements of the specified
-     * collection, in the order they are returned by the collection's
-     * iterator.
      *
-     * @param c the collection whose elements are to be placed into this
-     *       vector
+     * @param c 集合
      * @throws NullPointerException if the specified collection is null
      * @since   1.2
      */
     public Vector(Collection<? extends E> c) {
-        elementData = c.toArray();
+        elementData = c.toArray();//elementData指向c集合的数组
         elementCount = elementData.length;
         // c.toArray might (incorrectly) not return Object[] (see 6260652)
-        if (elementData.getClass() != Object[].class)
+        if (elementData.getClass() != Object[].class)//如果数组的类型不是对象数组
             elementData = Arrays.copyOf(elementData, elementCount, Object[].class);
     }
 
     /**
-     * Copies the components of this vector into the specified array.
-     * The item at index {@code k} in this vector is copied into
-     * component {@code k} of {@code anArray}.
-     *
-     * @param  anArray the array into which the components get copied
-     * @throws NullPointerException if the given array is null
-     * @throws IndexOutOfBoundsException if the specified array is not
-     *         large enough to hold all the components of this vector
-     * @throws ArrayStoreException if a component of this vector is not of
-     *         a runtime type that can be stored in the specified array
-     * @see #toArray(Object[])
+     * synchronized把elementData中的所有数据拷贝到anArray
      */
     public synchronized void copyInto(Object[] anArray) {
         System.arraycopy(elementData, 0, anArray, 0, elementCount);
     }
 
     /**
-     * Trims the capacity of this vector to be the vector's current
-     * size. If the capacity of this vector is larger than its current
-     * size, then the capacity is changed to equal the size by replacing
-     * its internal data array, kept in the field {@code elementData},
-     * with a smaller one. An application can use this operation to
-     * minimize the storage of a vector.
+     * 去掉数组多余的长度
      */
     public synchronized void trimToSize() {
         modCount++;
@@ -209,21 +91,8 @@ public class Vector<E>
     }
 
     /**
-     * Increases the capacity of this vector, if necessary, to ensure
-     * that it can hold at least the number of components specified by
-     * the minimum capacity argument.
-     *
-     * <p>If the current capacity of this vector is less than
-     * {@code minCapacity}, then its capacity is increased by replacing its
-     * internal data array, kept in the field {@code elementData}, with a
-     * larger one.  The size of the new data array will be the old size plus
-     * {@code capacityIncrement}, unless the value of
-     * {@code capacityIncrement} is less than or equal to zero, in which case
-     * the new capacity will be twice the old capacity; but if this new size
-     * is still smaller than {@code minCapacity}, then the new capacity will
-     * be {@code minCapacity}.
-     *
-     * @param minCapacity the desired minimum capacity
+     * 看看是否需要扩容
+     * @param 所需的最小容量
      */
     public synchronized void ensureCapacity(int minCapacity) {
         if (minCapacity > 0) {
@@ -233,39 +102,41 @@ public class Vector<E>
     }
 
     /**
-     * This implements the unsynchronized semantics of ensureCapacity.
-     * Synchronized methods in this class can internally call this
-     * method for ensuring capacity without incurring the cost of an
-     * extra synchronization.
-     *
-     * @see #ensureCapacity(int)
+     *	帮助扩容
      */
     private void ensureCapacityHelper(int minCapacity) {
         // overflow-conscious code
-        if (minCapacity - elementData.length > 0)
-            grow(minCapacity);
+        if (minCapacity - elementData.length > 0)//所需的最小容量大于当前数组的长度
+            grow(minCapacity);//扩容
     }
 
     /**
-     * The maximum size of array to allocate.
-     * Some VMs reserve some header words in an array.
-     * Attempts to allocate larger arrays may result in
-     * OutOfMemoryError: Requested array size exceeds VM limit
+     * 数组的最大长度
      */
     private static final int MAX_ARRAY_SIZE = Integer.MAX_VALUE - 8;
 
+    /**
+     * 扩容
+     * @param minCapacity 所需的最小容量
+     */
     private void grow(int minCapacity) {
-        // overflow-conscious code
-        int oldCapacity = elementData.length;
+        int oldCapacity = elementData.length;//当前数组的长度
+        //如果capacityIncrement的大于0就使用用户自己设置的扩容大小 newCapacity = oldCapacity + capacityIncrement
+        //否者 newCapacity = oldCapacity * 2 
         int newCapacity = oldCapacity + ((capacityIncrement > 0) ?
                                          capacityIncrement : oldCapacity);
-        if (newCapacity - minCapacity < 0)
-            newCapacity = minCapacity;
-        if (newCapacity - MAX_ARRAY_SIZE > 0)
+        if (newCapacity - minCapacity < 0)//扩容后的容量还是小于所需的最小容量
+            newCapacity = minCapacity; 
+        if (newCapacity - MAX_ARRAY_SIZE > 0)//扩容后的容量大于最大的数组长度
             newCapacity = hugeCapacity(minCapacity);
-        elementData = Arrays.copyOf(elementData, newCapacity);
+        elementData = Arrays.copyOf(elementData, newCapacity);//数据拷贝的扩容后的数组中且elementData指向扩容后的数组
     }
 
+    /**
+     * 超大容量的选择
+     * @param minCapacity 所需的最小容量
+     * @return
+     */
     private static int hugeCapacity(int minCapacity) {
         if (minCapacity < 0) // overflow
             throw new OutOfMemoryError();
@@ -275,13 +146,8 @@ public class Vector<E>
     }
 
     /**
-     * Sets the size of this vector. If the new size is greater than the
-     * current size, new {@code null} items are added to the end of
-     * the vector. If the new size is less than the current size, all
-     * components at index {@code newSize} and greater are discarded.
-     *
-     * @param  newSize   the new size of this vector
-     * @throws ArrayIndexOutOfBoundsException if the new size is negative
+     * 设置数组的大小 大于当前数组的长度 扩容	小于当前数据的大小 置空部分数据
+     * @param  newSize   数组新的大小
      */
     public synchronized void setSize(int newSize) {
         modCount++;
@@ -296,31 +162,21 @@ public class Vector<E>
     }
 
     /**
-     * Returns the current capacity of this vector.
-     *
-     * @return  the current capacity (the length of its internal
-     *          data array, kept in the field {@code elementData}
-     *          of this vector)
+     * 获取当前容量大小
      */
     public synchronized int capacity() {
         return elementData.length;
     }
 
     /**
-     * Returns the number of components in this vector.
-     *
-     * @return  the number of components in this vector
+     * 获取当前数据的数量
      */
     public synchronized int size() {
         return elementCount;
     }
 
     /**
-     * Tests if this vector has no components.
-     *
-     * @return  {@code true} if and only if this vector has
-     *          no components, that is, its size is zero;
-     *          {@code false} otherwise.
+     *	判断是否为空
      */
     public synchronized boolean isEmpty() {
         return elementCount == 0;
@@ -355,48 +211,26 @@ public class Vector<E>
     }
 
     /**
-     * Returns {@code true} if this vector contains the specified element.
-     * More formally, returns {@code true} if and only if this vector
-     * contains at least one element {@code e} such that
-     * <tt>(o==null&nbsp;?&nbsp;e==null&nbsp;:&nbsp;o.equals(e))</tt>.
-     *
-     * @param o element whose presence in this vector is to be tested
-     * @return {@code true} if this vector contains the specified element
+     *	判断是否包含o对象
+     * @param o 
      */
     public boolean contains(Object o) {
         return indexOf(o, 0) >= 0;
     }
 
     /**
-     * Returns the index of the first occurrence of the specified element
-     * in this vector, or -1 if this vector does not contain the element.
-     * More formally, returns the lowest index {@code i} such that
-     * <tt>(o==null&nbsp;?&nbsp;get(i)==null&nbsp;:&nbsp;o.equals(get(i)))</tt>,
-     * or -1 if there is no such index.
-     *
-     * @param o element to search for
-     * @return the index of the first occurrence of the specified element in
-     *         this vector, or -1 if this vector does not contain the element
+     *	找到就返回对应的下标 没有找到就返回-1
+     * @param o 对象
      */
     public int indexOf(Object o) {
         return indexOf(o, 0);
     }
 
     /**
-     * Returns the index of the first occurrence of the specified element in
-     * this vector, searching forwards from {@code index}, or returns -1 if
-     * the element is not found.
-     * More formally, returns the lowest index {@code i} such that
-     * <tt>(i&nbsp;&gt;=&nbsp;index&nbsp;&amp;&amp;&nbsp;(o==null&nbsp;?&nbsp;get(i)==null&nbsp;:&nbsp;o.equals(get(i))))</tt>,
-     * or -1 if there is no such index.
-     *
-     * @param o element to search for
-     * @param index index to start searching from
-     * @return the index of the first occurrence of the element in
-     *         this vector at position {@code index} or later in the vector;
-     *         {@code -1} if the element is not found.
-     * @throws IndexOutOfBoundsException if the specified index is negative
-     * @see     Object#equals(Object)
+     *	找到就返回对应的下标 没有找到就返回-1
+     *	null用==   对象用equals
+     * @param o 查询的数据
+     * @param index 查找开始的下标
      */
     public synchronized int indexOf(Object o, int index) {
         if (o == null) {
@@ -412,38 +246,20 @@ public class Vector<E>
     }
 
     /**
-     * Returns the index of the last occurrence of the specified element
-     * in this vector, or -1 if this vector does not contain the element.
-     * More formally, returns the highest index {@code i} such that
-     * <tt>(o==null&nbsp;?&nbsp;get(i)==null&nbsp;:&nbsp;o.equals(get(i)))</tt>,
-     * or -1 if there is no such index.
-     *
-     * @param o element to search for
-     * @return the index of the last occurrence of the specified element in
-     *         this vector, or -1 if this vector does not contain the element
+     *	找最后一个找到就返回对应的下标 没有找到就返回-1
+     * @param o 对象
      */
     public synchronized int lastIndexOf(Object o) {
         return lastIndexOf(o, elementCount-1);
     }
 
     /**
-     * Returns the index of the last occurrence of the specified element in
-     * this vector, searching backwards from {@code index}, or returns -1 if
-     * the element is not found.
-     * More formally, returns the highest index {@code i} such that
-     * <tt>(i&nbsp;&lt;=&nbsp;index&nbsp;&amp;&amp;&nbsp;(o==null&nbsp;?&nbsp;get(i)==null&nbsp;:&nbsp;o.equals(get(i))))</tt>,
-     * or -1 if there is no such index.
-     *
-     * @param o element to search for
-     * @param index index to start searching backwards from
-     * @return the index of the last occurrence of the element at position
-     *         less than or equal to {@code index} in this vector;
-     *         -1 if the element is not found.
-     * @throws IndexOutOfBoundsException if the specified index is greater
-     *         than or equal to the current size of this vector
+     * 从后往前找  找到就返回对应的下标 没有找到就返回-1
+     * @param o 对象
+     * @param index 最大的下标
      */
     public synchronized int lastIndexOf(Object o, int index) {
-        if (index >= elementCount)
+        if (index >= elementCount)//大于数据量
             throw new IndexOutOfBoundsException(index + " >= "+ elementCount);
 
         if (o == null) {
@@ -459,30 +275,18 @@ public class Vector<E>
     }
 
     /**
-     * Returns the component at the specified index.
-     *
-     * <p>This method is identical in functionality to the {@link #get(int)}
-     * method (which is part of the {@link List} interface).
-     *
-     * @param      index   an index into this vector
-     * @return     the component at the specified index
-     * @throws ArrayIndexOutOfBoundsException if the index is out of range
-     *         ({@code index < 0 || index >= size()})
+     * 获取数据
+     * @param      index   下标
      */
     public synchronized E elementAt(int index) {
-        if (index >= elementCount) {
+        if (index >= elementCount) {//大于数据量
             throw new ArrayIndexOutOfBoundsException(index + " >= " + elementCount);
         }
-
-        return elementData(index);
+        return elementData(index);//数组下标获取
     }
 
     /**
-     * Returns the first component (the item at index {@code 0}) of
-     * this vector.
-     *
-     * @return     the first component of this vector
-     * @throws NoSuchElementException if this vector has no components
+     * 获取第一个数据
      */
     public synchronized E firstElement() {
         if (elementCount == 0) {
@@ -492,11 +296,7 @@ public class Vector<E>
     }
 
     /**
-     * Returns the last component of the vector.
-     *
-     * @return  the last component of the vector, i.e., the component at index
-     *          <code>size()&nbsp;-&nbsp;1</code>.
-     * @throws NoSuchElementException if this vector is empty
+     * 获取最后一个数据
      */
     public synchronized E lastElement() {
         if (elementCount == 0) {
@@ -506,24 +306,7 @@ public class Vector<E>
     }
 
     /**
-     * Sets the component at the specified {@code index} of this
-     * vector to be the specified object. The previous component at that
-     * position is discarded.
-     *
-     * <p>The index must be a value greater than or equal to {@code 0}
-     * and less than the current size of the vector.
-     *
-     * <p>This method is identical in functionality to the
-     * {@link #set(int, Object) set(int, E)}
-     * method (which is part of the {@link List} interface). Note that the
-     * {@code set} method reverses the order of the parameters, to more closely
-     * match array usage.  Note also that the {@code set} method returns the
-     * old value that was stored at the specified position.
-     *
-     * @param      obj     what the component is to be set to
-     * @param      index   the specified index
-     * @throws ArrayIndexOutOfBoundsException if the index is out of range
-     *         ({@code index < 0 || index >= size()})
+     * 设置对应下标的数据
      */
     public synchronized void setElementAt(E obj, int index) {
         if (index >= elementCount) {
@@ -534,23 +317,7 @@ public class Vector<E>
     }
 
     /**
-     * Deletes the component at the specified index. Each component in
-     * this vector with an index greater or equal to the specified
-     * {@code index} is shifted downward to have an index one
-     * smaller than the value it had previously. The size of this vector
-     * is decreased by {@code 1}.
-     *
-     * <p>The index must be a value greater than or equal to {@code 0}
-     * and less than the current size of the vector.
-     *
-     * <p>This method is identical in functionality to the {@link #remove(int)}
-     * method (which is part of the {@link List} interface).  Note that the
-     * {@code remove} method returns the old value that was stored at the
-     * specified position.
-     *
-     * @param      index   the index of the object to remove
-     * @throws ArrayIndexOutOfBoundsException if the index is out of range
-     *         ({@code index < 0 || index >= size()})
+     * 移除对应下标的数据
      */
     public synchronized void removeElementAt(int index) {
         modCount++;
@@ -563,34 +330,14 @@ public class Vector<E>
         }
         int j = elementCount - index - 1;
         if (j > 0) {
-            System.arraycopy(elementData, index + 1, elementData, index, j);
+            System.arraycopy(elementData, index + 1, elementData, index, j);//数据的移动
         }
         elementCount--;
-        elementData[elementCount] = null; /* to let gc do its work */
+        elementData[elementCount] = null; //利于gc
     }
 
     /**
-     * Inserts the specified object as a component in this vector at the
-     * specified {@code index}. Each component in this vector with
-     * an index greater or equal to the specified {@code index} is
-     * shifted upward to have an index one greater than the value it had
-     * previously.
-     *
-     * <p>The index must be a value greater than or equal to {@code 0}
-     * and less than or equal to the current size of the vector. (If the
-     * index is equal to the current size of the vector, the new element
-     * is appended to the Vector.)
-     *
-     * <p>This method is identical in functionality to the
-     * {@link #add(int, Object) add(int, E)}
-     * method (which is part of the {@link List} interface).  Note that the
-     * {@code add} method reverses the order of the parameters, to more closely
-     * match array usage.
-     *
-     * @param      obj     the component to insert
-     * @param      index   where to insert the new component
-     * @throws ArrayIndexOutOfBoundsException if the index is out of range
-     *         ({@code index < 0 || index > size()})
+     * 对应下标插入数据
      */
     public synchronized void insertElementAt(E obj, int index) {
         modCount++;
@@ -598,22 +345,14 @@ public class Vector<E>
             throw new ArrayIndexOutOfBoundsException(index
                                                      + " > " + elementCount);
         }
-        ensureCapacityHelper(elementCount + 1);
-        System.arraycopy(elementData, index, elementData, index + 1, elementCount - index);
+        ensureCapacityHelper(elementCount + 1);//看看是否需要扩容
+        System.arraycopy(elementData, index, elementData, index + 1, elementCount - index);//数据的移动
         elementData[index] = obj;
         elementCount++;
     }
 
     /**
-     * Adds the specified component to the end of this vector,
-     * increasing its size by one. The capacity of this vector is
-     * increased if its size becomes greater than its capacity.
-     *
-     * <p>This method is identical in functionality to the
-     * {@link #add(Object) add(E)}
-     * method (which is part of the {@link List} interface).
-     *
-     * @param   obj   the component to be added
+     *	添加数据 从后添加
      */
     public synchronized void addElement(E obj) {
         modCount++;
@@ -622,19 +361,7 @@ public class Vector<E>
     }
 
     /**
-     * Removes the first (lowest-indexed) occurrence of the argument
-     * from this vector. If the object is found in this vector, each
-     * component in the vector with an index greater or equal to the
-     * object's index is shifted downward to have an index one smaller
-     * than the value it had previously.
-     *
-     * <p>This method is identical in functionality to the
-     * {@link #remove(Object)} method (which is part of the
-     * {@link List} interface).
-     *
-     * @param   obj   the component to be removed
-     * @return  {@code true} if the argument was a component of this
-     *          vector; {@code false} otherwise.
+     * 删除obj数据对应下标的数组数据
      */
     public synchronized boolean removeElement(Object obj) {
         modCount++;
@@ -647,10 +374,7 @@ public class Vector<E>
     }
 
     /**
-     * Removes all components from this vector and sets its size to zero.
-     *
-     * <p>This method is identical in functionality to the {@link #clear}
-     * method (which is part of the {@link List} interface).
+     * 删除所有数据
      */
     public synchronized void removeAllElements() {
         modCount++;
@@ -682,37 +406,14 @@ public class Vector<E>
     }
 
     /**
-     * Returns an array containing all of the elements in this Vector
-     * in the correct order.
-     *
-     * @since 1.2
+     * 将数据部分拷贝到新的数组中并返回
      */
     public synchronized Object[] toArray() {
         return Arrays.copyOf(elementData, elementCount);
     }
 
     /**
-     * Returns an array containing all of the elements in this Vector in the
-     * correct order; the runtime type of the returned array is that of the
-     * specified array.  If the Vector fits in the specified array, it is
-     * returned therein.  Otherwise, a new array is allocated with the runtime
-     * type of the specified array and the size of this Vector.
-     *
-     * <p>If the Vector fits in the specified array with room to spare
-     * (i.e., the array has more elements than the Vector),
-     * the element in the array immediately following the end of the
-     * Vector is set to null.  (This is useful in determining the length
-     * of the Vector <em>only</em> if the caller knows that the Vector
-     * does not contain any null elements.)
-     *
-     * @param a the array into which the elements of the Vector are to
-     *          be stored, if it is big enough; otherwise, a new array of the
-     *          same runtime type is allocated for this purpose.
-     * @return an array containing the elements of the Vector
-     * @throws ArrayStoreException if the runtime type of a is not a supertype
-     * of the runtime type of every element in this Vector
-     * @throws NullPointerException if the given array is null
-     * @since 1.2
+     * 将数据部分拷贝到指定类型的新的数组中并返回
      */
     @SuppressWarnings("unchecked")
     public synchronized <T> T[] toArray(T[] a) {
@@ -728,20 +429,17 @@ public class Vector<E>
     }
 
     // Positional Access Operations
-
+    
+    /**
+     * 通过下标获取数据
+     */
     @SuppressWarnings("unchecked")
     E elementData(int index) {
         return (E) elementData[index];
     }
 
     /**
-     * Returns the element at the specified position in this Vector.
-     *
-     * @param index index of the element to return
-     * @return object at the specified index
-     * @throws ArrayIndexOutOfBoundsException if the index is out of range
-     *            ({@code index < 0 || index >= size()})
-     * @since 1.2
+     * 通过下标获取数据
      */
     public synchronized E get(int index) {
         if (index >= elementCount)
@@ -751,15 +449,7 @@ public class Vector<E>
     }
 
     /**
-     * Replaces the element at the specified position in this Vector with the
-     * specified element.
-     *
-     * @param index index of the element to replace
-     * @param element element to be stored at the specified position
-     * @return the element previously at the specified position
-     * @throws ArrayIndexOutOfBoundsException if the index is out of range
-     *         ({@code index < 0 || index >= size()})
-     * @since 1.2
+     * 在index位置设置新数据并返回旧数据
      */
     public synchronized E set(int index, E element) {
         if (index >= elementCount)
@@ -771,11 +461,7 @@ public class Vector<E>
     }
 
     /**
-     * Appends the specified element to the end of this Vector.
-     *
-     * @param e element to be appended to this Vector
-     * @return {@code true} (as specified by {@link Collection#add})
-     * @since 1.2
+     * 从后添加数据
      */
     public synchronized boolean add(E e) {
         modCount++;
@@ -785,45 +471,21 @@ public class Vector<E>
     }
 
     /**
-     * Removes the first occurrence of the specified element in this Vector
-     * If the Vector does not contain the element, it is unchanged.  More
-     * formally, removes the element with the lowest index i such that
-     * {@code (o==null ? get(i)==null : o.equals(get(i)))} (if such
-     * an element exists).
-     *
-     * @param o element to be removed from this Vector, if present
-     * @return true if the Vector contained the specified element
-     * @since 1.2
+     * 删除obj数据对应下标的数组数据
      */
     public boolean remove(Object o) {
         return removeElement(o);
     }
 
     /**
-     * Inserts the specified element at the specified position in this Vector.
-     * Shifts the element currently at that position (if any) and any
-     * subsequent elements to the right (adds one to their indices).
-     *
-     * @param index index at which the specified element is to be inserted
-     * @param element element to be inserted
-     * @throws ArrayIndexOutOfBoundsException if the index is out of range
-     *         ({@code index < 0 || index > size()})
-     * @since 1.2
+     * 对应下标插入数据
      */
     public void add(int index, E element) {
         insertElementAt(element, index);
     }
 
     /**
-     * Removes the element at the specified position in this Vector.
-     * Shifts any subsequent elements to the left (subtracts one from their
-     * indices).  Returns the element that was removed from the Vector.
-     *
-     * @throws ArrayIndexOutOfBoundsException if the index is out of range
-     *         ({@code index < 0 || index >= size()})
-     * @param index the index of the element to be removed
-     * @return element that was removed
-     * @since 1.2
+     * 删除对应下标的数据 并返回被删除的数据
      */
     public synchronized E remove(int index) {
         modCount++;
@@ -841,10 +503,7 @@ public class Vector<E>
     }
 
     /**
-     * Removes all of the elements from this Vector.  The Vector will
-     * be empty after this call returns (unless it throws an exception).
-     *
-     * @since 1.2
+     * 删除所有的数据
      */
     public void clear() {
         removeAllElements();
