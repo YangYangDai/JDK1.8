@@ -12,14 +12,12 @@ import java.util.function.Function;
 import sun.misc.SharedSecrets;
 
 /**
- * 	键值对的集合 线程不安全
+ * 	键值对的方式存储 
+ *  线程不安全
  * 	底层由数组+链表/红黑树实现
- * 	键值都可以为null
- * 	链表过长会转化为红黑树
- * 	键不允许重复 值可以重复
- * 	在没有hash碰撞的情况下增删改查的时间复杂度为O(1) 最坏的情况下所有的数据都在一个Node上 所有的操作直接变成了在链表上
- * 	hashMap中键值都可以为null
- * 	
+ * 	键值都可以为null 键不允许重复 值可以重复
+ * 	在没有hash碰撞的情况下增删改查的时间复杂度为O(1) 
+ * 	链表和红黑树会相互转化
  */
 public class HashMap<K,V> extends AbstractMap<K,V>
     implements Map<K,V>, Cloneable, Serializable {
@@ -288,18 +286,20 @@ public class HashMap<K,V> extends AbstractMap<K,V>
      */
     final Node<K,V> getNode(int hash, Object key) {
         Node<K,V>[] tab; Node<K,V> first, e; int n; K k;//tab指向table n=当前容量   first取得key所在Node
+        //table不为null且table的长度大于0且key在table数组中存在
         if ((tab = table) != null && (n = tab.length) > 0 &&
-            (first = tab[(n - 1) & hash]) != null) {//table数组不为null且table数组的长度大于0且key在table数组中存在 table数组已经初始化
-        	//	直接判断首节点是不是要查询的数据节点
+            (first = tab[(n - 1) & hash]) != null) {
+        	//直接判断首节点是不是要查询的数据节点
         	if (first.hash == hash && // 判断hash是否相等且 (两者的key是不是相等或者两者的key equals是否相等)
                 ((k = first.key) == key || (key != null && key.equals(k))))
                 return first;//符合条件就直接返回
-            if ((e = first.next) != null) {//	判断首节点后面是否还有其它Node
+        	//判断首节点后面是否还有其它Node
+            if ((e = first.next) != null) {
                 if (first instanceof TreeNode)//红黑树
                     return ((TreeNode<K,V>)first).getTreeNode(hash, key);//红黑树里面查找
-                //	链表 从前向后遍历链表查找直到找到或者next为null
-                do {
-                    if (e.hash == hash &&//判断hash是否相等且(两者的key是不是相等或者两者的key equals是否相等)
+                do {//链表 从前向后遍历链表查找直到找到或者next节点为null
+                	//判断hash是否相等且(两者的key是不是相等或者两者的key equals是否相等)
+                    if (e.hash == hash &&
                         ((k = e.key) == key || (key != null && key.equals(k))))
                         return e;//找到就直接返回节点
                 } while ((e = e.next) != null);
@@ -332,43 +332,58 @@ public class HashMap<K,V> extends AbstractMap<K,V>
     final V putVal(int hash, K key, V value, boolean onlyIfAbsent,
                    boolean evict) {
         Node<K,V>[] tab; Node<K,V> p; int n, i;//tab指向table n=当前容量  
-        if ((tab = table) == null || (n = tab.length) == 0)//table数组为null或者table数组的长度等于0说明数组还没初始化
+        //table数组为null或者table数组的长度等于0 说明数组还没初始化
+        if ((tab = table) == null || (n = tab.length) == 0)
             n = (tab = resize()).length;//这里是初始化
-        if ((p = tab[i = (n - 1) & hash]) == null)//当在table数组中定位到的Node为空 直接新建一个node并把定位到的Node指向新建的node p指向桶中的node
+        // 取得key在table数组中的下标 在table数组中定位到的首节点为空 p指向桶中的node
+        if ((p = tab[i = (n - 1) & hash]) == null)
+        	//直接新建一个node并把定位到的数组下标指向新建的node
             tab[i] = newNode(hash, key, value, null);
         else {// 发生哈希碰撞  
             Node<K,V> e; K k;
-            if (p.hash == hash &&//先判断与首节点是不是相同那个的 hash是否相等且(两者的key是不是相等或者两者的key equals是否相等)
+            //判断是不是就是首节点 hash是否相等且(两者的key是不是相等或者两者的key equals是否相等)
+            if (p.hash == hash &&
                 ((k = p.key) == key || (key != null && key.equals(k))))
-                e = p;//e指向p 相同的key后面覆盖value
+                e = p;//是的话 直接覆盖 e指向p 相同的key后面覆盖value
             else if (p instanceof TreeNode)//红黑树
-                e = ((TreeNode<K,V>)p).putTreeVal(this, tab, hash, key, value);//找到相同key的节点直接返回对应的节点 增加的话返回null
+            	//找到相同key的节点直接返回对应的节点 增加的话返回null
+                e = ((TreeNode<K,V>)p).putTreeVal(this, tab, hash, key, value);
             else {//链表
-                for (int binCount = 0; ; ++binCount) {//binCount 统计链表的节点数
-                    if ((e = p.next) == null) {//直到找到链表next为null的节点
-                        p.next = newNode(hash, key, value, null);//next指向新增的node 
-                        if (binCount >= TREEIFY_THRESHOLD - 1) //
-                            treeifyBin(tab, hash);//链表节点数大于等于8时  尝试转成红黑树
+            	//binCount 统计链表的节点数
+                for (int binCount = 0; ; ++binCount) {
+                	//当节点的next节点为null 没有找到相同key的节点 链表尾部新增
+                    if ((e = p.next) == null) {
+                        p.next = newNode(hash, key, value, null);
+                        //链表节点数达到扩容的阈值
+                        if (binCount >= TREEIFY_THRESHOLD - 1) 
+                        	//链表节点数大于等于8时  尝试转成红黑树
+                            treeifyBin(tab, hash);
                         break;
                     }
+                    //判断是否是相同key的节点 找到说明key已经存在 中断链表的遍历 对值进行覆盖就好
                     if (e.hash == hash &&
-                        ((k = e.key) == key || (key != null && key.equals(k))))//key相同时直接中断循环
+                        ((k = e.key) == key || (key != null && key.equals(k))))
                         break;
                     p = e;//p指向p.next
                 }
             }
-            if (e != null) { //如果e不为空 说明key在之前就存在映射 就用新值覆盖掉旧值并返回旧值
+            //如果e不为空 说明存在相同的key 用新值覆盖掉旧值并返回旧值
+            if (e != null) { 
                 V oldValue = e.value;
                 if (!onlyIfAbsent || oldValue == null)
                     e.value = value;
-                afterNodeAccess(e);//留了一个空方法 留给子类操作 读取node之后做点什么   LinkedHashMap 模板方法模式
+                //留了一个空方法 留给子类操作 读取node之后做点什么 
+                //在LinkedHashMap中有实现 模板方法模式
+                afterNodeAccess(e);
                 return oldValue;
             }
         }
         ++modCount;
-        if (++size > threshold)//当前的大小大于threshold阈值
+        //当前的大小大于threshold阈值
+        if (++size > threshold)
             resize();//扩容
-        afterNodeInsertion(evict);//留了一个空方法 留给子类操作 新增node之后做点什么   LinkedHashMap 模板方法模式
+        //留了一个空方法 留给子类操作 新增node之后做点什么   LinkedHashMap 模板方法模式
+        afterNodeInsertion(evict);
         return null;
     }
 
@@ -377,11 +392,14 @@ public class HashMap<K,V> extends AbstractMap<K,V>
      * @return the table
      */
     final Node<K,V>[] resize() {
-        Node<K,V>[] oldTab = table;//oldTab指向当前的数组
-        int oldCap = (oldTab == null) ? 0 : oldTab.length;//获取当前数组的大小
+    	//oldTab指向当前的数组
+        Node<K,V>[] oldTab = table;
+        //获取当前数组的大小
+        int oldCap = (oldTab == null) ? 0 : oldTab.length;
         int oldThr = threshold;//获取当前容量
         int newCap, newThr = 0;//扩容后数组的容量和阈值
-        if (oldCap > 0) {//当前数组长度大于0
+        //当前数组长度大于0
+        if (oldCap > 0) {
             if (oldCap >= MAXIMUM_CAPACITY) {//当前数组长度大于等于最大容量
                 threshold = Integer.MAX_VALUE;//threshold=Integer.MAX_VALUE
                 return oldTab;//返回当前数组
@@ -390,12 +408,13 @@ public class HashMap<K,V> extends AbstractMap<K,V>
                      oldCap >= DEFAULT_INITIAL_CAPACITY)//扩容后的数组大小小于(1 << 30)且oldCap大于等于16
                 newThr = oldThr << 1; // 扩容后的阈值也是是当前阈值的两倍 
         }
-        else if (oldThr > 0) // initial capacity was placed in threshold
+        else if (oldThr > 0) // 当前阈值大于0
             newCap = oldThr;
         else {  // 当前数组和阈值都没有初始化
             newCap = DEFAULT_INITIAL_CAPACITY;//扩容后数组的容量=16
             newThr = (int)(DEFAULT_LOAD_FACTOR * DEFAULT_INITIAL_CAPACITY);//扩容后的阈值=16*0.75=12
         }
+        //新阈值等于0
         if (newThr == 0) {
             float ft = (float)newCap * loadFactor;
             newThr = (newCap < MAXIMUM_CAPACITY && ft < (float)MAXIMUM_CAPACITY ?
@@ -405,19 +424,21 @@ public class HashMap<K,V> extends AbstractMap<K,V>
         @SuppressWarnings({"rawtypes","unchecked"})
             Node<K,V>[] newTab = (Node<K,V>[])new Node[newCap];//new一个新的数组  长度为newCap
         table = newTab;//当前数组指向新的数组
-        if (oldTab != null) {// 如果旧数组不为空 把旧数组的数据rehash到新数组
+        //如果旧数组不为空 把旧数组的数据rehash到新数组
+        if (oldTab != null) {
             for (int j = 0; j < oldCap; ++j) {// 遍历旧数组
                 Node<K,V> e;
                 if ((e = oldTab[j]) != null) {//e指向Node=oldTab[j]如果不为空
                     oldTab[j] = null;//便于gc
-                    if (e.next == null)//Node的下个节点为空的话 在新数组中重新定位 (e.hash & (newCap - 1))
+                    //Node的下个节点为空的话 说明链表的长度为1 只有首节点 在新数组中重新定位 (e.hash & (newCap - 1))
+                    if (e.next == null)
                         newTab[e.hash & (newCap - 1)] = e;//用重新定位后的数组指向旧Node
                     else if (e instanceof TreeNode)//如果node为红黑树
                         ((TreeNode<K,V>)e).split(this, newTab, j, oldCap);
                     else { // node为链表 把旧链表rehash后放到新的链表中 并且保证旧链表的数据在新链表中顺序不变
-                    	// 指向旧链表rehash在数组中位置不变的Node头尾指针
+                    	// rehash后在新数组中位置不变的Node头尾指针
                         Node<K,V> loHead = null, loTail = null;
-                        // 指向旧链表rehash在数组中位置改变的数据头尾指针
+                        // rehash后在新数组中位置改变的数据头尾指针
                         Node<K,V> hiHead = null, hiTail = null;
                         Node<K,V> next;
                         do {
@@ -504,18 +525,22 @@ public class HashMap<K,V> extends AbstractMap<K,V>
      * @param value 值
      * @param matchValue 如果为true 需要键值都匹配才删除
      * @param movable 如果为true删除后可以移动？
+     * (n - 1) & hash 找到hash值对应的数组下标
      */
     final Node<K,V> removeNode(int hash, Object key, Object value,
                                boolean matchValue, boolean movable) {
         Node<K,V>[] tab; Node<K,V> p; int n, index;//tab指向table n=当前容量 index=定位的数组下标 p指向在数组中定位到的node
-        if ((tab = table) != null && (n = tab.length) > 0 &&//数组不为null且长度大于0且定位到的node不为空
+        //table不为null且长度大于0且定位到的node不为空
+        if ((tab = table) != null && (n = tab.length) > 0 &&
             (p = tab[index = (n - 1) & hash]) != null) {
             Node<K,V> node = null, e; K k; V v;//node指向要删除的node
-            if (p.hash == hash && //直接判断是不是数组中的node
+            //判断首节点是不是要删除的节点
+            if (p.hash == hash && 
                 ((k = p.key) == key || (key != null && key.equals(k))))
                 node = p;
             else if ((e = p.next) != null) {//当next不为空时
-                if (p instanceof TreeNode)//红黑树 在红黑树中查找
+            	//红黑树 在红黑树中查找
+                if (p instanceof TreeNode)
                     node = ((TreeNode<K,V>)p).getTreeNode(hash, key);
                 else {//链表 遍历链表中查找相等的节点
                     do {
@@ -532,15 +557,16 @@ public class HashMap<K,V> extends AbstractMap<K,V>
             //当node不为空且不需要值相等或者需要node值与方法入参的值==或者equals
             if (node != null && (!matchValue || (v = node.value) == value ||
                                  (value != null && value.equals(v)))) {
-                if (node instanceof TreeNode)//红黑树
+                if (node instanceof TreeNode)//红黑树中删除
                     ((TreeNode<K,V>)node).removeTreeNode(this, tab, movable);
-                else if (node == p)//如果是定位到的node
+                else if (node == p)//如果是首节点
                     tab[index] = node.next;//直接把数组中index下标的引用指向定位到的node的next节点
                 else
                     p.next = node.next;//把定位到的节点的next指向被删除节点的next
                 ++modCount;
                 --size;//大小减一
-                afterNodeRemoval(node);//节点删除后的操作  做点什么  LinkedHashMap 模板方法模式
+             	//节点删除后的操作 HashMap中是空方法 LinkedHashMap中有实现 模板方法模式
+                afterNodeRemoval(node);
                 return node;
             }
         }
@@ -1455,7 +1481,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
         size = 0;
     }
 
-    // Callbacks to allow LinkedHashMap post-actions
+    // LinkedHashMap操作后的回调
     void afterNodeAccess(Node<K,V> p) { }
     void afterNodeInsertion(boolean evict) { }
     void afterNodeRemoval(Node<K,V> p) { }
@@ -1477,16 +1503,14 @@ public class HashMap<K,V> extends AbstractMap<K,V>
     // Tree bins
 
     /**
-     * Entry for Tree bins. Extends LinkedHashMap.Entry (which in turn
-     * extends Node) so can be used as extension of either regular or
-     * linked node.
+     * 红黑树节点
      */
     static final class TreeNode<K,V> extends LinkedHashMap.Entry<K,V> {
-        TreeNode<K,V> parent;  // red-black tree links
-        TreeNode<K,V> left;
-        TreeNode<K,V> right;
+        TreeNode<K,V> parent;  // 父节点
+        TreeNode<K,V> left; //左孩子
+        TreeNode<K,V> right; //右孩子
         TreeNode<K,V> prev;    // needed to unlink next upon deletion
-        boolean red;
+        boolean red; //是红节点
         TreeNode(int hash, K key, V val, Node<K,V> next) {
             super(hash, key, val, next);
         }
