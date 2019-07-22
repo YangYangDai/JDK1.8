@@ -6,10 +6,11 @@ import java.util.function.BiFunction;
 import java.io.IOException;
 
 /**
- * 继承HashMap
+ * 继承了HashMap
  * 通过双向链表将所有节点连接起来
- * 可以保证插入或者读取的顺序
- * 可以使用LinkedHashMap实现LRU(最近最少使用算法)
+ * 主要是实现了HashMap中留的几个空方法来完成自己的特性
+ * 数据可以按插入、读取的顺序访问
+ * LinkedHashMap可以实现LRU(最近最少使用算法)
  */
 public class LinkedHashMap<K,V>
     extends HashMap<K,V>
@@ -18,7 +19,7 @@ public class LinkedHashMap<K,V>
     /**
      * Entry在Node上添加了前后指针(before, after) 可以将所有的node都链接起来
      * TreeNode继承Entry Entry继承Node
-     * 用来维护插入或LRU(最近最少使用)的顺序
+     * 用来维护插入或访问的顺序
      */
     static class Entry<K,V> extends HashMap.Node<K,V> {
         Entry<K,V> before, after;
@@ -131,8 +132,8 @@ public class LinkedHashMap<K,V>
     }
     /**
      * 覆盖HashMap afterNodeRemoval 
-     * 在HashMap删除数据之后的回调 
-     * 在双向链表中也移除掉
+     * HashMap删除数据之后的回调 
+     * 在双向链表中也移除掉对应的节点
      */
     void afterNodeRemoval(Node<K,V> e) { 
         LinkedHashMap.Entry<K,V> p =
@@ -149,27 +150,27 @@ public class LinkedHashMap<K,V>
     }
     /**
      * 覆盖HashMap afterNodeInsertion 
-     * 在HashMap插入数据之后的调用 根据条件判断是否要移除最近最少被访问的节点
+     * HashMap插入数据之后的调用 根据条件判断是否要移除最近最少被访问的节点
      * removeEldestEntry(first) 返回的是false 也就是默认是不清除缓存也就是双向链表中的数据 
-     * 当我们自己去实现这个方法 做一些缓存的策略
-     * evict=false 属于创建
+     * 当我们自己去实现这个方法 做一些缓存的策略 比如说控制缓存的大小，当缓存到达某个值之后删除节点
      */
-    void afterNodeInsertion(boolean evict) { // possibly remove eldest
+    void afterNodeInsertion(boolean evict) { // 删除最近最少使用的节点
         LinkedHashMap.Entry<K,V> first;
         //evict=true&&head!=null&&removeEldestEntry(first)=true
         if (evict && (first = head) != null && removeEldestEntry(first)) {
-            K key = first.key;
-            removeNode(hash(key), key, null, false, true);//调用父类的removeNode
+            K key = first.key;//删除双端队列对头的节点 最近最少使用
+            removeNode(hash(key), key, null, false, true);//调用HashMap的removeNode
         }
     }
     /**
      * 覆盖HashMap afterNodeAccess
-     * HashMap访问之后的操作  
+     * 访问节点之后的操作  
      * 根据是否按访问顺序排序 将尾节点指向e 前尾结点的after指向e e的before节点指向前尾结点
      */
     void afterNodeAccess(Node<K,V> e) { 
         LinkedHashMap.Entry<K,V> last;
-        if (accessOrder && (last = tail) != e) {//访问顺序排序&&头节点指向的不是e
+        //按访问顺序&&尾节点指向的不是e
+        if (accessOrder && (last = tail) != e) {
             LinkedHashMap.Entry<K,V> p =
                 (LinkedHashMap.Entry<K,V>)e, b = p.before, a = p.after;
             p.after = null;
@@ -242,9 +243,9 @@ public class LinkedHashMap<K,V>
 
     /**
      *	调用父类的构造
-     * @param  initialCapacity map的大小
+     * @param  initialCapacity map初始化大小
      * @param  loadFactor      加载因子
-     * @param  accessOrder    true 以访问的顺序  LRU 最近最少使用算法  false 以插入的顺序  
+     * @param  accessOrder    true 以访问的顺序(可实现LRU)   false 以插入的顺序  
      */
     public LinkedHashMap(int initialCapacity,
                          float loadFactor,
@@ -269,13 +270,13 @@ public class LinkedHashMap<K,V>
 
     /**
      * 覆盖HashMap get
-     * getNode使用的是HashMap的
+     * getNode调用的还是HashMap中的
      */
     public V get(Object key) {
         Node<K,V> e;
         if ((e = getNode(hash(key), key)) == null)//获取到Node 等于null就直接返回
             return null;
-        if (accessOrder)//判断缓存策略是否使用LRU
+        if (accessOrder)//是否按访问顺序
             afterNodeAccess(e);//放到缓存链表的尾部
         return e.value;
     }

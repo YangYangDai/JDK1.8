@@ -4,9 +4,10 @@ import java.io.InvalidObjectException;
 import sun.misc.SharedSecrets;
 
 /**
- *	底层由HashMap实现  非线程安全
- *	数据不可重复		由是HashMap中的key不可重复保证
- *	所有的操作都是以基于HashMap
+ *	底层由HashMap实现  
+ *	非线程安全
+ *	数据不可重复	由HashMap中的key不可重复保证
+ *	所有的操作都是由内部属性HashMap
  */
 public class HashSet<E>
     extends AbstractSet<E>
@@ -14,9 +15,13 @@ public class HashSet<E>
 {
     static final long serialVersionUID = -5024744406713321676L;
 
-    //数据存储在map的key中
+    /**
+     * 数据存储在map的key中
+     */
     private transient HashMap<E,Object> map;
-    //HashMap中所有映射的值
+    /**
+     * HashMap中所有映射对应的值
+     */
     private static final Object PRESENT = new Object();
 
     /**
