@@ -11,5 +11,7 @@
 1. [Semaphore](https://github.com/YangYangDai/JDK1.8/blob/master/src/java/util/concurrent/Semaphore.java "Semaphore")
 2. [CountDownLatch](https://github.com/YangYangDai/JDK1.8/blob/master/src/java/util/concurrent/CountDownLatch.java "CountDownLatch")
 3. [CyclicBarrier](https://github.com/YangYangDai/JDK1.8/blob/master/src/java/util/concurrent/CyclicBarrier.java "CyclicBarrier")
-
-
+4. [ReentrantLock](https://github.com/YangYangDai/JDK1.8/blob/master/src/java/util/concurrent/locks/ReentrantLock.java "ReentrantLock")
+5. [ArrayBlockingQueue](https://github.com/YangYangDai/JDK1.8/blob/master/src/java/util/concurrent/ArrayBlockingQueue.java "ArrayBlockingQueue")
+6. [LinkedBlockingQueue](https://github.com/YangYangDai/JDK1.8/blob/master/src/java/util/concurrent/LinkedBlockingQueue.java "LinkedBlockingQueue")
+7. [LinkedBlockingDeque](https://github.com/YangYangDai/JDK1.8/blob/master/src/java/util/concurrent/LinkedBlockingDeque.java "LinkedBlockingDeque") 
