@@ -6,7 +6,7 @@ import java.util.Date;
 import sun.misc.Unsafe;
 
 /**
- * 	抽象的队列同步器
+ * 	抽象的队列同步器 AQS
  */
 public abstract class AbstractQueuedSynchronizer
     extends AbstractOwnableSynchronizer
@@ -172,7 +172,7 @@ public abstract class AbstractQueuedSynchronizer
     static final long spinForTimeoutThreshold = 1000L;
 
     /**
-     * 	死循保证节点能插入到阻塞队列的队尾
+     * 	死循保证节点能插入到阻塞队列的队
      * 	@return 返回node的前驱节点
      */
     private Node enq(final Node node) {
@@ -290,7 +290,7 @@ public abstract class AbstractQueuedSynchronizer
     }
 
     /**
-     * 	把node设置同步队列的头节点 并向后传播自己获取锁成功的信息
+     * 	把node设置同步队列的头节点 如果还有可用的资源数，则继续唤醒后续节点
      *  共享锁才会用到
      * @param propagate 还可以获取的资源数
      */
@@ -788,9 +788,9 @@ public abstract class AbstractQueuedSynchronizer
 
     /**
      *	一定时间获取共享锁  可中断
-     * @param arg 
+     * @param arg 获取的许可证数量
      * @param nanosTimeout 等待的最大纳秒数
-     * @return 获取成功 true  超时或获取失败false
+     * @return 获取成功 true  超时或获取失败 false
      */
     public final boolean tryAcquireSharedNanos(int arg, long nanosTimeout)
             throws InterruptedException {
@@ -803,7 +803,7 @@ public abstract class AbstractQueuedSynchronizer
     }
 
     /**
-     * 	尝试释放共享锁
+     * 	释放共享锁
      */
     public final boolean releaseShared(int arg) {
     	//尝试释放共享锁成功 子类实现

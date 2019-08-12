@@ -3,11 +3,12 @@ import java.util.Collection;
 import java.util.concurrent.locks.AbstractQueuedSynchronizer;
 
 /**
- *	 信号量 以许可证为共享资源控制线程数
- *	 共享锁
+ *	信号量 内部使用共享锁实现
+ *	以许可证为共享资源控制线程数
  *	内部有公平和非公平的两种同步器
  * 	线程抢夺到指定个数的许可证后 可执行
- * 	用完然后释放掉 阻塞的线程会抢夺许可证 抢到的许可证后可执行
+ * 	用完然后释放掉 阻塞的线程会抢夺许可证 抢到许可证后可执行
+ *  有公平和非公平的两种实现
  */
 public class Semaphore implements java.io.Serializable {
     private static final long serialVersionUID = -3222578661600680210L;
@@ -34,13 +35,14 @@ public class Semaphore implements java.io.Serializable {
         }
         /**
          *	非公平尝试获取许可证
-         *	可用的许可证不够 返回负数
-         *	够的话 返回剩余可用的许可证个数
+         *	获取锁失败 remaining<0
+         *	获取锁成功 remaining>=0
          *	@param acquires 请求获取的许可证个数
          */
         final int nonfairTryAcquireShared(int acquires) {
             for (;;) {//死循环
                 int available = getState();
+                //剩余的可用许可证个数
                 int remaining = available - acquires;
                 if (remaining < 0 ||
                     compareAndSetState(available, remaining))
@@ -56,7 +58,7 @@ public class Semaphore implements java.io.Serializable {
             	//获取当前可用的许可证数量
                 int current = getState();
                 int next = current + releases;
-                if (next < current) // overflow
+                if (next < current) 
                     throw new Error("Maximum permit count exceeded");
                 //cas设置许可证的数量 成功返回true
                 if (compareAndSetState(current, next))
@@ -68,11 +70,14 @@ public class Semaphore implements java.io.Serializable {
          *	@param reductions 减少许可证的数量
          */
         final void reducePermits(int reductions) {
-            for (;;) {
+            for (;;) {//死循环
+            	//获取当前可用的许可证数量
                 int current = getState();
+                //减少可用的许可证数量
                 int next = current - reductions;
-                if (next > current) // underflow
+                if (next > current) 
                     throw new Error("Permit count underflow");
+                //cas设置许可证的数量 成功返回true
                 if (compareAndSetState(current, next))
                     return;
             }
@@ -105,6 +110,7 @@ public class Semaphore implements java.io.Serializable {
          *	@param acquires 请求获取的许可证个数
          */
         protected int tryAcquireShared(int acquires) {
+        	//获取锁失败 remaining<0 获取锁成功 remaining>=0
             return nonfairTryAcquireShared(acquires);
         }
     }
@@ -122,8 +128,7 @@ public class Semaphore implements java.io.Serializable {
         /**
          * 	尝试请求许可证
          * @param acquires 请求获取的许可证个数
-         * @return 许可证的个数不够 负数  阻塞队列中已经有线程在排队了 直接返回 -1
-         * 			获取到返回剩下的可用许可证数量  大于等于0
+         * @return 获取锁失败 remaining<0 获取锁成功 remaining>=0
          */
         protected int tryAcquireShared(int acquires) {
             for (;;) {
@@ -132,9 +137,9 @@ public class Semaphore implements java.io.Serializable {
                     return -1;
                 //获取可用的许可证
                 int available = getState();
-                //得到剩余的许可证
+                //剩余可用的许可证个数
                 int remaining = available - acquires;
-                //剩余许可证的个数小于0或者cas设置许可证的剩余个数成功
+                //获取锁失败 remaining<0 获取锁成功 remaining>=0
                 if (remaining < 0 ||
                     compareAndSetState(available, remaining))
                     return remaining;
@@ -162,6 +167,7 @@ public class Semaphore implements java.io.Serializable {
      * 	获取一个许可证 可中断
      */
     public void acquire() throws InterruptedException {
+    	//调用的是AQS中的模板方法
         sync.acquireSharedInterruptibly(1);
     }
 
@@ -169,6 +175,7 @@ public class Semaphore implements java.io.Serializable {
      *	 获取一个许可证 不可中断
      */
     public void acquireUninterruptibly() {
+    	//调用的是AQS中的模板方法
         sync.acquireShared(1);
     }
 
@@ -177,6 +184,7 @@ public class Semaphore implements java.io.Serializable {
      * @return 获取成功 true 获取失败 false
      */
     public boolean tryAcquire() {
+    	//仅使用CAS+自旋 不会加入阻塞队列中 
         return sync.nonfairTryAcquireShared(1) >= 0;
     }
 
@@ -185,10 +193,10 @@ public class Semaphore implements java.io.Serializable {
      * @param timeout 最大等待获取许可证的时间
      * @param unit timeout的时间单位
      * @return 获取成功返回true 获取时间超时返回false
-     * @throws InterruptedException if the current thread is interrupted
      */
     public boolean tryAcquire(long timeout, TimeUnit unit)
         throws InterruptedException {
+    	//调用的是AQS中的模板方法
         return sync.tryAcquireSharedNanos(1, unit.toNanos(timeout));
     }
 
@@ -196,6 +204,7 @@ public class Semaphore implements java.io.Serializable {
      * 	释放一个许可证
      */
     public void release() {
+    	//调用的是AQS中的模板方法
         sync.releaseShared(1);
     }
 
@@ -205,6 +214,7 @@ public class Semaphore implements java.io.Serializable {
      */
     public void acquire(int permits) throws InterruptedException {
         if (permits < 0) throw new IllegalArgumentException();
+        //调用的是AQS中的模板方法
         sync.acquireSharedInterruptibly(permits);
     }
 
@@ -214,17 +224,18 @@ public class Semaphore implements java.io.Serializable {
      */
     public void acquireUninterruptibly(int permits) {
         if (permits < 0) throw new IllegalArgumentException();
+        //调用的是AQS中的模板方法
         sync.acquireShared(permits);
     }
 
     /**
-     *	内部循环获取几个许可证  不可中断
+     *	内部循环获取几个许可证  不可中断 
      * @param permits the number of permits to acquire
-     * @return 获取成功 true 获取失败 false 不会加入阻塞队列中 
-     * @throws IllegalArgumentException if {@code permits} is negative
+     * @return 获取成功 true 获取失败 false 
      */
     public boolean tryAcquire(int permits) {
         if (permits < 0) throw new IllegalArgumentException();
+        //仅使用CAS+自旋 不会加入阻塞队列中 
         return sync.nonfairTryAcquireShared(permits) >= 0;
     }
 
@@ -238,6 +249,7 @@ public class Semaphore implements java.io.Serializable {
     public boolean tryAcquire(int permits, long timeout, TimeUnit unit)
         throws InterruptedException {
         if (permits < 0) throw new IllegalArgumentException();
+        //调用的是AQS中的模板方法
         return sync.tryAcquireSharedNanos(permits, unit.toNanos(timeout));
     }
 
@@ -248,6 +260,7 @@ public class Semaphore implements java.io.Serializable {
      */
     public void release(int permits) {
         if (permits < 0) throw new IllegalArgumentException();
+       //调用的是AQS中的模板方法
         sync.releaseShared(permits);
     }
 
