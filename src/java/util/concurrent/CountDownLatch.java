@@ -2,9 +2,10 @@ package java.util.concurrent;
 import java.util.concurrent.locks.AbstractQueuedSynchronizer;
 
 /**
+ * 	CountDownLatch 使用AQS中的共享锁
  * 	可以使用CountDownLatch完成一下的工作
  * 	一个或多个线程等待一个或多完成之后再执行
- * 	await方法  同步状态的值大于0 线程阻塞
+ * 	await方法  同步状态的值大于0线程阻塞
  * 	countDown方法 同步状态的值减一 同步状态的值等于0 唤起所有等待的线程
  */
 public class CountDownLatch {
@@ -24,7 +25,9 @@ public class CountDownLatch {
         }
         /**
          * 	 尝试获取共享锁
-         *	 同步状态的值等于0则返回1 否者返回-1
+         *	 同步状态的值等于0 当前等待的线程获取到锁
+         *	否则就需要等待
+         *	则返回1 否者返回-1
          */
         protected int tryAcquireShared(int acquires) {
             return (getState() == 0) ? 1 : -1;
@@ -66,6 +69,7 @@ public class CountDownLatch {
      * 	state != 0 阻塞线程
      */
     public void await() throws InterruptedException {
+    	//调用AQS中的模板方法
         sync.acquireSharedInterruptibly(1);
     }
 
@@ -75,14 +79,16 @@ public class CountDownLatch {
      */
     public boolean await(long timeout, TimeUnit unit)
         throws InterruptedException {
+    	//调用AQS中的模板方法
         return sync.tryAcquireSharedNanos(1, unit.toNanos(timeout));
     }
 
     /**
-     * state减一
+     * 	state减一
      * 	内部同步器实现
      */
     public void countDown() {
+    	//调用AQS中的模板方法
         sync.releaseShared(1);
     }
 
@@ -94,13 +100,6 @@ public class CountDownLatch {
         return sync.getCount();
     }
 
-    /**
-     * Returns a string identifying this latch, as well as its state.
-     * The state, in brackets, includes the String {@code "Count ="}
-     * followed by the current count.
-     *
-     * @return a string identifying this latch, as well as its state
-     */
     public String toString() {
         return super.toString() + "[Count = " + sync.getCount() + "]";
     }
