@@ -7,6 +7,7 @@
 5. [HashMap](https://github.com/YangYangDai/JDK1.8/blob/master/src/java/util/HashMap.java "HashMap")
 6. [HashSet](https://github.com/YangYangDai/JDK1.8/blob/master/src/java/util/HashSet.java "HashSet")
 7. [LinkedHashMap](https://github.com/YangYangDai/JDK1.8/blob/master/src/java/util/LinkedHashMap.java "LinkedHashMap")
+8. [LinkedHashSet](https://github.com/YangYangDai/JDK1.8/blob/master/src/java/util/LinkedHashSet.java "LinkedHashSet")
 ------------
 ### java并发工具类 java.util.concurent(J.U.C)
 1. [Semaphore](https://github.com/YangYangDai/JDK1.8/blob/master/src/java/util/concurrent/Semaphore.java "Semaphore")
