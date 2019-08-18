@@ -1,80 +1,33 @@
-/*
- * Copyright (c) 2009, 2013, Oracle and/or its affiliates. All rights reserved.
- * ORACLE PROPRIETARY/CONFIDENTIAL. Use is subject to license terms.
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- */
-
 package java.util;
 
 import java.util.function.Supplier;
 
 /**
- * This class consists of {@code static} utility methods for operating
- * on objects.  These utilities include {@code null}-safe or {@code
- * null}-tolerant methods for computing the hash code of an object,
- * returning a string for an object, and comparing two objects.
- *
- * @since 1.7
+ * 	对象的工具类
  */
 public final class Objects {
+	//不给实例化
     private Objects() {
         throw new AssertionError("No java.util.Objects instances for you!");
     }
 
     /**
-     * Returns {@code true} if the arguments are equal to each other
-     * and {@code false} otherwise.
-     * Consequently, if both arguments are {@code null}, {@code true}
-     * is returned and if exactly one argument is {@code null}, {@code
-     * false} is returned.  Otherwise, equality is determined by using
-     * the {@link Object#equals equals} method of the first
-     * argument.
-     *
-     * @param a an object
-     * @param b an object to be compared with {@code a} for equality
-     * @return {@code true} if the arguments are equal to each other
-     * and {@code false} otherwise
-     * @see Object#equals(Object)
+     * 	判断两个对象是否想相等
+     * @param a 对象a
+     * @param b 对象b
+     * @return true 说明两个对象相等 false 说明不想等
      */
     public static boolean equals(Object a, Object b) {
+    	//1.判断两个对象是不是同一个对象 是的话直接返回true
+    	//2.先判断a不null 才能调用equals方法判断是不是相等
         return (a == b) || (a != null && a.equals(b));
     }
-
+    
    /**
-    * Returns {@code true} if the arguments are deeply equal to each other
-    * and {@code false} otherwise.
-    *
-    * Two {@code null} values are deeply equal.  If both arguments are
-    * arrays, the algorithm in {@link Arrays#deepEquals(Object[],
-    * Object[]) Arrays.deepEquals} is used to determine equality.
-    * Otherwise, equality is determined by using the {@link
-    * Object#equals equals} method of the first argument.
-    *
+    *	对象的话就和上面的一样 但如果对象是数组就会确定数据的类型 对比两个数组 要完全相同的
     * @param a an object
     * @param b an object to be compared with {@code a} for deep equality
-    * @return {@code true} if the arguments are deeply equal to each other
-    * and {@code false} otherwise
-    * @see Arrays#deepEquals(Object[], Object[])
-    * @see Objects#equals(Object, Object)
+    * @return  true 说明两个对象相等 false 说明不想等
     */
     public static boolean deepEquals(Object a, Object b) {
         if (a == b)
@@ -86,55 +39,26 @@ public final class Objects {
     }
 
     /**
-     * Returns the hash code of a non-{@code null} argument and 0 for
-     * a {@code null} argument.
-     *
+     *	获取对象的hashCode
      * @param o an object
-     * @return the hash code of a non-{@code null} argument and 0 for
-     * a {@code null} argument
-     * @see Object#hashCode
+     * @return 0 表示o为null 
      */
     public static int hashCode(Object o) {
         return o != null ? o.hashCode() : 0;
     }
 
    /**
-    * Generates a hash code for a sequence of input values. The hash
-    * code is generated as if all the input values were placed into an
-    * array, and that array were hashed by calling {@link
-    * Arrays#hashCode(Object[])}.
-    *
-    * <p>This method is useful for implementing {@link
-    * Object#hashCode()} on objects containing multiple fields. For
-    * example, if an object that has three fields, {@code x}, {@code
-    * y}, and {@code z}, one could write:
-    *
-    * <blockquote><pre>
-    * &#064;Override public int hashCode() {
-    *     return Objects.hash(x, y, z);
-    * }
-    * </pre></blockquote>
-    *
-    * <b>Warning: When a single object reference is supplied, the returned
-    * value does not equal the hash code of that object reference.</b> This
-    * value can be computed by calling {@link #hashCode(Object)}.
-    *
-    * @param values the values to be hashed
-    * @return a hash value of the sequence of input values
-    * @see Arrays#hashCode(Object[])
-    * @see List#hashCode
+    *	计算数组的hashCode	
+    * @return 0 表示o为null 
     */
     public static int hash(Object... values) {
         return Arrays.hashCode(values);
     }
 
     /**
-     * Returns the result of calling {@code toString} for a non-{@code
-     * null} argument and {@code "null"} for a {@code null} argument.
-     *
+     *	对象toString
      * @param o an object
-     * @return the result of calling {@code toString} for a non-{@code
-     * null} argument and {@code "null"} for a {@code null} argument
+     * @return  null的话返回字符串"null" 如果对象自己实现了 就调用自己的 不然就会调用Object-》 类名称 + "@" + 16进制的hashcode
      * @see Object#toString
      * @see String#valueOf(Object)
      */
@@ -143,14 +67,10 @@ public final class Objects {
     }
 
     /**
-     * Returns the result of calling {@code toString} on the first
-     * argument if the first argument is not {@code null} and returns
-     * the second argument otherwise.
-     *
+     * 	对象toString
      * @param o an object
-     * @param nullDefault string to return if the first argument is
-     *        {@code null}
-     * @return the result of calling {@code toString} on the first
+     * @param nullDefault 
+     * @return null的话返回字符串返回nullDefault 其它的和上面一个方法一样
      * argument if it is not {@code null} and the second argument
      * otherwise.
      * @see Objects#toString(Object)
@@ -159,44 +79,16 @@ public final class Objects {
         return (o != null) ? o.toString() : nullDefault;
     }
 
-    /**
-     * Returns 0 if the arguments are identical and {@code
-     * c.compare(a, b)} otherwise.
-     * Consequently, if both arguments are {@code null} 0
-     * is returned.
-     *
-     * <p>Note that if one of the arguments is {@code null}, a {@code
-     * NullPointerException} may or may not be thrown depending on
-     * what ordering policy, if any, the {@link Comparator Comparator}
-     * chooses to have for {@code null} values.
-     *
-     * @param <T> the type of the objects being compared
-     * @param a an object
-     * @param b an object to be compared with {@code a}
-     * @param c the {@code Comparator} to compare the first two arguments
-     * @return 0 if the arguments are identical and {@code
-     * c.compare(a, b)} otherwise.
-     * @see Comparable
-     * @see Comparator
+    /**	
+     *	用比较器比较两个对象 
+     * @return a<b -1 a=b 0 a>b 1
      */
     public static <T> int compare(T a, T b, Comparator<? super T> c) {
         return (a == b) ? 0 :  c.compare(a, b);
     }
 
     /**
-     * Checks that the specified object reference is not {@code null}. This
-     * method is designed primarily for doing parameter validation in methods
-     * and constructors, as demonstrated below:
-     * <blockquote><pre>
-     * public Foo(Bar bar) {
-     *     this.bar = Objects.requireNonNull(bar);
-     * }
-     * </pre></blockquote>
-     *
-     * @param obj the object reference to check for nullity
-     * @param <T> the type of the reference
-     * @return {@code obj} if not {@code null}
-     * @throws NullPointerException if {@code obj} is {@code null}
+     *	获取一个非空的对象  null的话 会抛出异常
      */
     public static <T> T requireNonNull(T obj) {
         if (obj == null)
@@ -205,20 +97,10 @@ public final class Objects {
     }
 
     /**
-     * Checks that the specified object reference is not {@code null} and
-     * throws a customized {@link NullPointerException} if it is. This method
-     * is designed primarily for doing parameter validation in methods and
-     * constructors with multiple parameters, as demonstrated below:
-     * <blockquote><pre>
-     * public Foo(Bar bar, Baz baz) {
-     *     this.bar = Objects.requireNonNull(bar, "bar must not be null");
-     *     this.baz = Objects.requireNonNull(baz, "baz must not be null");
-     * }
-     * </pre></blockquote>
+     * 	获取一个非空的对象  null的话 会抛出异常
      *
      * @param obj     the object reference to check for nullity
-     * @param message detail message to be used in the event that a {@code
-     *                NullPointerException} is thrown
+     * @param message 可以带上信息message
      * @param <T> the type of the reference
      * @return {@code obj} if not {@code null}
      * @throws NullPointerException if {@code obj} is {@code null}
@@ -230,60 +112,24 @@ public final class Objects {
     }
 
     /**
-     * Returns {@code true} if the provided reference is {@code null} otherwise
-     * returns {@code false}.
-     *
-     * @apiNote This method exists to be used as a
-     * {@link java.util.function.Predicate}, {@code filter(Objects::isNull)}
-     *
-     * @param obj a reference to be checked against {@code null}
-     * @return {@code true} if the provided reference is {@code null} otherwise
-     * {@code false}
-     *
-     * @see java.util.function.Predicate
-     * @since 1.8
+     *	判断当前对象是不是空
+     *	@return true 对象为null 
      */
     public static boolean isNull(Object obj) {
         return obj == null;
     }
 
     /**
-     * Returns {@code true} if the provided reference is non-{@code null}
-     * otherwise returns {@code false}.
-     *
-     * @apiNote This method exists to be used as a
-     * {@link java.util.function.Predicate}, {@code filter(Objects::nonNull)}
-     *
-     * @param obj a reference to be checked against {@code null}
-     * @return {@code true} if the provided reference is non-{@code null}
-     * otherwise {@code false}
-     *
-     * @see java.util.function.Predicate
-     * @since 1.8
+     *	判断当前对象是不是空不为null
+     *	@return true 对象不为null 
      */
     public static boolean nonNull(Object obj) {
         return obj != null;
     }
 
     /**
-     * Checks that the specified object reference is not {@code null} and
-     * throws a customized {@link NullPointerException} if it is.
-     *
-     * <p>Unlike the method {@link #requireNonNull(Object, String)},
-     * this method allows creation of the message to be deferred until
-     * after the null check is made. While this may confer a
-     * performance advantage in the non-null case, when deciding to
-     * call this method care should be taken that the costs of
-     * creating the message supplier are less than the cost of just
-     * creating the string message directly.
-     *
-     * @param obj     the object reference to check for nullity
-     * @param messageSupplier supplier of the detail message to be
-     * used in the event that a {@code NullPointerException} is thrown
-     * @param <T> the type of the reference
-     * @return {@code obj} if not {@code null}
-     * @throws NullPointerException if {@code obj} is {@code null}
-     * @since 1.8
+     *	获取一个不为null的对象
+     *	null的时候会带上messageSupplier里面的信息
      */
     public static <T> T requireNonNull(T obj, Supplier<String> messageSupplier) {
         if (obj == null)
