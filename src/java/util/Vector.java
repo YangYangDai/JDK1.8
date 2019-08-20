@@ -5,9 +5,10 @@ import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
 
 /**
- * 底层由数组实现的 线程安全
- * 关键方法上都加上了synchronized 并发安全但为此开销也会大  
- * 不推荐使用
+ * 底层由数组实现的 
+ * 线程安全的
+ * 关键方法上都加上了synchronized同步关键字 并发安全但为此开销也会较大
+ * 已不推荐使用
  */
 public class Vector<E>
     extends AbstractList<E>
@@ -46,45 +47,51 @@ public class Vector<E>
     }
 
     /**
+     * capacityIncrement默认为0
+     * @param   initialCapacity     初始化数组大小
      */
     public Vector(int initialCapacity) {
         this(initialCapacity, 0);
     }
 
     /**
-     * 
+     * initialCapacity 默认为10
+     * capacityIncrement 默认为0
      */
     public Vector() {
         this(10);
     }
 
     /**
-     *
      * @param c 集合
-     * @throws NullPointerException if the specified collection is null
-     * @since   1.2
      */
     public Vector(Collection<? extends E> c) {
-        elementData = c.toArray();//elementData指向c集合的数组
+    	//elementData指向c集合的数组
+        elementData = c.toArray();
+        //设置数据量
         elementCount = elementData.length;
-        // c.toArray might (incorrectly) not return Object[] (see 6260652)
-        if (elementData.getClass() != Object[].class)//如果数组的类型不是对象数组
+        //数组的类型不是对象数组，elementData指向copy出来的新对象数组
+        if (elementData.getClass() != Object[].class)
             elementData = Arrays.copyOf(elementData, elementCount, Object[].class);
     }
 
     /**
-     * synchronized把elementData中的所有数据拷贝到anArray
+     * 	synchronized保证并发安全
+     * 	把elementData中的所有数据拷贝到anArray
      */
     public synchronized void copyInto(Object[] anArray) {
         System.arraycopy(elementData, 0, anArray, 0, elementCount);
     }
 
     /**
+     * synchronized保证并发安全
      * 去掉数组多余的长度
      */
     public synchronized void trimToSize() {
         modCount++;
+        //获取当前数组长度
         int oldCapacity = elementData.length;
+        //容量大小数组长度时 elementData指向新copy的数组 长度为elementCount
         if (elementCount < oldCapacity) {
             elementData = Arrays.copyOf(elementData, elementCount);
         }
@@ -105,9 +112,10 @@ public class Vector<E>
      *	帮助扩容
      */
     private void ensureCapacityHelper(int minCapacity) {
-        // overflow-conscious code
-        if (minCapacity - elementData.length > 0)//所需的最小容量大于当前数组的长度
-            grow(minCapacity);//扩容
+    	//所需的最小容量大于当前数组的长度
+        if (minCapacity - elementData.length > 0)
+        	//扩容
+            grow(minCapacity);
     }
 
     /**
@@ -120,16 +128,20 @@ public class Vector<E>
      * @param minCapacity 所需的最小容量
      */
     private void grow(int minCapacity) {
-        int oldCapacity = elementData.length;//当前数组的长度
-        //如果capacityIncrement的大于0就使用用户自己设置的扩容大小 newCapacity = oldCapacity + capacityIncrement
+    	//当前数组的长度
+        int oldCapacity = elementData.length;
+        //capacityIncrement大于0就使用用户自己设置的扩容大小 newCapacity = oldCapacity + capacityIncrement
         //否者 newCapacity = oldCapacity * 2 
         int newCapacity = oldCapacity + ((capacityIncrement > 0) ?
                                          capacityIncrement : oldCapacity);
-        if (newCapacity - minCapacity < 0)//扩容后的容量还是小于所需的最小容量
+        //扩容后的容量还是小于所需的最小容量
+        if (newCapacity - minCapacity < 0)
             newCapacity = minCapacity; 
-        if (newCapacity - MAX_ARRAY_SIZE > 0)//扩容后的容量大于最大的数组长度
+        //扩容后的容量大于最大的数组长度
+        if (newCapacity - MAX_ARRAY_SIZE > 0)
             newCapacity = hugeCapacity(minCapacity);
-        elementData = Arrays.copyOf(elementData, newCapacity);//数据拷贝的扩容后的数组中且elementData指向扩容后的数组
+        //elementData指向新数组 数据拷贝到扩容后的新数组中
+        elementData = Arrays.copyOf(elementData, newCapacity);
     }
 
     /**
@@ -138,8 +150,10 @@ public class Vector<E>
      * @return
      */
     private static int hugeCapacity(int minCapacity) {
-        if (minCapacity < 0) // overflow
+    	//小于0直接抛出异常
+        if (minCapacity < 0)
             throw new OutOfMemoryError();
+        //minCapacity大于MAX_ARRAY_SIZE就直接返回Integer.MAX_VALUE
         return (minCapacity > MAX_ARRAY_SIZE) ?
             Integer.MAX_VALUE :
             MAX_ARRAY_SIZE;
@@ -151,9 +165,11 @@ public class Vector<E>
      */
     public synchronized void setSize(int newSize) {
         modCount++;
+        //大于当前的大小就扩容
         if (newSize > elementCount) {
             ensureCapacityHelper(newSize);
         } else {
+        	//小于的话 就置空一部分数据  [newSize,elementCount)
             for (int i = newSize ; i < elementCount ; i++) {
                 elementData[i] = null;
             }
@@ -246,7 +262,7 @@ public class Vector<E>
     }
 
     /**
-     *	找最后一个找到就返回对应的下标 没有找到就返回-1
+     *	从数组的尾部开始找 找到就返回对应的下标 没有找到就返回-1
      * @param o 对象
      */
     public synchronized int lastIndexOf(Object o) {
@@ -329,11 +345,14 @@ public class Vector<E>
             throw new ArrayIndexOutOfBoundsException(index);
         }
         int j = elementCount - index - 1;
+        //说明删除的不是最尾部的那个数据
         if (j > 0) {
-            System.arraycopy(elementData, index + 1, elementData, index, j);//数据的移动
+        	//将删除位置的数据后的项  全向前移动一位
+            System.arraycopy(elementData, index + 1, elementData, index, j);
         }
         elementCount--;
-        elementData[elementCount] = null; //利于gc
+        //置空尾部
+        elementData[elementCount] = null; 
     }
 
     /**
@@ -345,8 +364,10 @@ public class Vector<E>
             throw new ArrayIndexOutOfBoundsException(index
                                                      + " > " + elementCount);
         }
-        ensureCapacityHelper(elementCount + 1);//看看是否需要扩容
-        System.arraycopy(elementData, index, elementData, index + 1, elementCount - index);//数据的移动
+        //看看是否需要扩容
+        ensureCapacityHelper(elementCount + 1);
+        //在index后的数据都向后移动一位
+        System.arraycopy(elementData, index, elementData, index + 1, elementCount - index);
         elementData[index] = obj;
         elementCount++;
     }
@@ -362,11 +383,14 @@ public class Vector<E>
 
     /**
      * 删除obj数据对应下标的数组数据
+     * @param true 删除成功 false 删除失败
      */
     public synchronized boolean removeElement(Object obj) {
         modCount++;
+        //找到就返回对应的下标 没有找到就返回-1
         int i = indexOf(obj);
         if (i >= 0) {
+        	//移除对应下标的数据
             removeElementAt(i);
             return true;
         }
@@ -378,7 +402,7 @@ public class Vector<E>
      */
     public synchronized void removeAllElements() {
         modCount++;
-        // Let gc do its work
+        //置空所有
         for (int i = 0; i < elementCount; i++)
             elementData[i] = null;
 
