@@ -1,49 +1,23 @@
-/*
- * Copyright (c) 1994, 2010, Oracle and/or its affiliates. All rights reserved.
- * ORACLE PROPRIETARY/CONFIDENTIAL. Use is subject to license terms.
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- */
-
 package java.util;
-
 /**
  * 栈
  * 先进后出
- * 继承自Vector 线程安全的但为此开销也会大
- * 底层也是由数组实现
- * 不推荐使用
+ * 继承Vector 底层是由数组实现 用synchronized关键字保证线程安全
+ * 已不推荐使用
  */
 public
 class Stack<E> extends Vector<E> {
     
     public Stack() {
+    	
     }
-
     /**
      * 入栈 栈顶入栈
      */
     public E push(E item) {
+    	//移除对应下标的数据
+    	//添加数据 从后添加
         addElement(item);
-
         return item;
     }
 
@@ -55,7 +29,8 @@ class Stack<E> extends Vector<E> {
         int     len = size();
         //获取数组
         obj = peek();
-        //删除尾部的数据
+        //父类Vector中的方法
+        //移除对应下标的数据
         removeElementAt(len - 1);
         return obj;
     }
@@ -68,6 +43,8 @@ class Stack<E> extends Vector<E> {
 
         if (len == 0)
             throw new EmptyStackException();
+        //父类Vector中的方法
+        //获取对应下标的值
         return elementAt(len - 1);
     }
 
@@ -83,7 +60,6 @@ class Stack<E> extends Vector<E> {
      */
     public synchronized int search(Object o) {
         int i = lastIndexOf(o);
-
         if (i >= 0) {
             return size() - i;
         }
