@@ -2,8 +2,9 @@ package java.util;
 
 /**
  * 	LinkedHashSet
- * 	把父类HashSet中的属性map初始化为了LinkedHashMap 可以保证插入或者读取的顺序 
- * 	这里默认是accessOrder以插入的顺序  
+ * 	继承HashSet
+ * 	初始化的时候会把父类HashSet中的属性map初始化为了LinkedHashMap 可以保证插入或者读取的顺序 
+ * 	默认accessOrder是以插入的顺序  
  * 	
  */
 public class LinkedHashSet<E>
