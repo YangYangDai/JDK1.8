@@ -1,37 +1,3 @@
-/*
- * ORACLE PROPRIETARY/CONFIDENTIAL. Use is subject to license terms.
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- */
-
-/*
- * Written by Doug Lea with assistance from members of JCP JSR-166
- * Expert Group.  Adapted and released, under explicit permission,
- * from JDK ArrayList.java which carries the following copyright:
- *
- * Copyright 1997 by Sun Microsystems, Inc.,
- * 901 San Antonio Road, Palo Alto, California, 94303, U.S.A.
- * All rights reserved.
- */
-
 package java.util.concurrent;
 import java.util.AbstractList;
 import java.util.Arrays;
@@ -53,147 +19,120 @@ import java.util.function.UnaryOperator;
 import sun.misc.SharedSecrets;
 
 /**
- * A thread-safe variant of {@link java.util.ArrayList} in which all mutative
- * operations ({@code add}, {@code set}, and so on) are implemented by
- * making a fresh copy of the underlying array.
- *
- * <p>This is ordinarily too costly, but may be <em>more</em> efficient
- * than alternatives when traversal operations vastly outnumber
- * mutations, and is useful when you cannot or don't want to
- * synchronize traversals, yet need to preclude interference among
- * concurrent threads.  The "snapshot" style iterator method uses a
- * reference to the state of the array at the point that the iterator
- * was created. This array never changes during the lifetime of the
- * iterator, so interference is impossible and the iterator is
- * guaranteed not to throw {@code ConcurrentModificationException}.
- * The iterator will not reflect additions, removals, or changes to
- * the list since the iterator was created.  Element-changing
- * operations on iterators themselves ({@code remove}, {@code set}, and
- * {@code add}) are not supported. These methods throw
- * {@code UnsupportedOperationException}.
- *
- * <p>All elements are permitted, including {@code null}.
- *
- * <p>Memory consistency effects: As with other concurrent
- * collections, actions in a thread prior to placing an object into a
- * {@code CopyOnWriteArrayList}
- * <a href="package-summary.html#MemoryVisibility"><i>happen-before</i></a>
- * actions subsequent to the access or removal of that element from
- * the {@code CopyOnWriteArrayList} in another thread.
- *
- * <p>This class is a member of the
- * <a href="{@docRoot}/../technotes/guides/collections/index.html">
- * Java Collections Framework</a>.
- *
- * @since 1.5
- * @author Doug Lea
- * @param <E> the type of elements held in this collection
+ *  CopyOnWriteArrayList
+ * 	array在读操作的时候会被改变 读操作很有可能操作的是旧array
+ * 	写操作直接用锁锁住对应的操作 读操作都是不用锁的
+ * 	适用于读多写少的场景
  */
 public class CopyOnWriteArrayList<E>
     implements List<E>, RandomAccess, Cloneable, java.io.Serializable {
     private static final long serialVersionUID = 8673264195747942595L;
 
-    /** The lock protecting all mutators */
+    /**
+     * 	可重入锁
+     */
     final transient ReentrantLock lock = new ReentrantLock();
 
-    /** The array, accessed only via getArray/setArray. */
+    /**
+     * 	对象数组存储数据项
+     * 	数组只能通过getArray / setArray访问 保证其原子性
+     * 	volatile保证其可见性和顺序性
+     */
     private transient volatile Object[] array;
 
     /**
-     * Gets the array.  Non-private so as to also be accessible
-     * from CopyOnWriteArraySet class.
+     * 	获取对象数组 不是private 是为了从CopyOnwriteArraySet类访问 
+     * 	CopyOnwriteArraySet 底层是通过CopyOnWriteArrayList实现
      */
     final Object[] getArray() {
         return array;
     }
 
     /**
-     * Sets the array.
+     * 	设置对象数组
      */
     final void setArray(Object[] a) {
         array = a;
     }
 
     /**
-     * Creates an empty list.
+     * 	初始化一个长度为0的对象数组
+     * 	然后设置给array
      */
     public CopyOnWriteArrayList() {
         setArray(new Object[0]);
     }
 
     /**
-     * Creates a list containing the elements of the specified
-     * collection, in the order they are returned by the collection's
-     * iterator.
-     *
-     * @param c the collection of initially held elements
-     * @throws NullPointerException if the specified collection is null
+     * 	将集合中的数据放入array中
+     * @param c 集合
      */
     public CopyOnWriteArrayList(Collection<? extends E> c) {
         Object[] elements;
+        //集合就是CopyOnWriteArrayList对象
         if (c.getClass() == CopyOnWriteArrayList.class)
             elements = ((CopyOnWriteArrayList<?>)c).getArray();
         else {
+        	//集合转成数组
             elements = c.toArray();
-            // c.toArray might (incorrectly) not return Object[] (see 6260652)
+            //数组的类型如果不是对象数组的话就要转成对象数组
             if (elements.getClass() != Object[].class)
                 elements = Arrays.copyOf(elements, elements.length, Object[].class);
         }
+        //把对象数组赋给array
         setArray(elements);
     }
 
     /**
-     * Creates a list holding a copy of the given array.
-     *
-     * @param toCopyIn the array (a copy of this array is used as the
-     *        internal array)
-     * @throws NullPointerException if the specified array is null
+     * 	把E类型的数组copy成对象数组 然后赋给array
+     * @param toCopyIn 数组
      */
     public CopyOnWriteArrayList(E[] toCopyIn) {
+    	//把E类型的数组copy成对象数组 然后赋给array
         setArray(Arrays.copyOf(toCopyIn, toCopyIn.length, Object[].class));
     }
 
     /**
-     * Returns the number of elements in this list.
-     *
-     * @return the number of elements in this list
+     * 	返回集合的大小
      */
     public int size() {
+    	//获取到数组的长度
         return getArray().length;
     }
 
     /**
-     * Returns {@code true} if this list contains no elements.
+     * 	判断是不是一个空集合
      *
-     * @return {@code true} if this list contains no elements
+     * @return true 表示没有任务数据 
      */
     public boolean isEmpty() {
+    	//数组的长度等于0说明是空集合
         return size() == 0;
     }
 
     /**
-     * Tests for equality, coping with nulls.
+     * 	判断两个对象是否相等
      */
     private static boolean eq(Object o1, Object o2) {
         return (o1 == null) ? o2 == null : o1.equals(o2);
     }
 
     /**
-     * static version of indexOf, to allow repeated calls without
-     * needing to re-acquire array each time.
-     * @param o element to search for
-     * @param elements the array
-     * @param index first index to search
-     * @param fence one past last index to search
-     * @return index of element, or -1 if absent
+     *	 查找对象的位置 从index遍历到fence
+     * @param o 查询的对象
+     * @param elements 对象数组
+     * @param index 开始查找的下标
+     * @param fence 结束查找的下标
+     * @return  找到就返回对应的下标  没有的就-1
      */
     private static int indexOf(Object o, Object[] elements,
-                               int index, int fence) {
+    		int index, int fence) {
+    	//o为null的话就直接查找等于null
         if (o == null) {
             for (int i = index; i < fence; i++)
                 if (elements[i] == null)
                     return i;
-        } else {
+        } else {//用对象的equals判断是否相等
             for (int i = index; i < fence; i++)
                 if (o.equals(elements[i]))
                     return i;
@@ -202,18 +141,19 @@ public class CopyOnWriteArrayList<E>
     }
 
     /**
-     * static version of lastIndexOf.
-     * @param o element to search for
-     * @param elements the array
-     * @param index first index to search
-     * @return index of element, or -1 if absent
+     * 	从index位置开始向前查找
+     * @param o 查找的对象
+     * @param elements 数组
+     * @param index 开始查找的下标
+     * @return 找到就返回对应的下标  没有的就-1
      */
     private static int lastIndexOf(Object o, Object[] elements, int index) {
-        if (o == null) {
+    	//o为null的话就直接查找等于null
+    	if (o == null) {
             for (int i = index; i >= 0; i--)
                 if (elements[i] == null)
                     return i;
-        } else {
+        } else {//用对象的equals判断是否相等
             for (int i = index; i >= 0; i--)
                 if (o.equals(elements[i]))
                     return i;
@@ -222,73 +162,62 @@ public class CopyOnWriteArrayList<E>
     }
 
     /**
-     * Returns {@code true} if this list contains the specified element.
-     * More formally, returns {@code true} if and only if this list contains
-     * at least one element {@code e} such that
-     * <tt>(o==null&nbsp;?&nbsp;e==null&nbsp;:&nbsp;o.equals(e))</tt>.
-     *
-     * @param o element whose presence in this list is to be tested
-     * @return {@code true} if this list contains the specified element
+     *	判断是否包含某个对象
+     * @param o 查找的对象
+     * @return true 存在 false 不存在
      */
     public boolean contains(Object o) {
+    	//指向array
         Object[] elements = getArray();
+        //找到就返回对应的下标  没有的就-1  大于等于0说明存在
         return indexOf(o, elements, 0, elements.length) >= 0;
     }
 
     /**
-     * {@inheritDoc}
+     * 	找到就返回对应的下标  没有的就-1
+     *	查找对象的位置 从头开始遍历
      */
     public int indexOf(Object o) {
+    	//指向array
         Object[] elements = getArray();
+        		//查找对象的位置 从0遍历到elements.length
         return indexOf(o, elements, 0, elements.length);
     }
 
     /**
-     * Returns the index of the first occurrence of the specified element in
-     * this list, searching forwards from {@code index}, or returns -1 if
-     * the element is not found.
-     * More formally, returns the lowest index {@code i} such that
-     * <tt>(i&nbsp;&gt;=&nbsp;index&nbsp;&amp;&amp;&nbsp;(e==null&nbsp;?&nbsp;get(i)==null&nbsp;:&nbsp;e.equals(get(i))))</tt>,
-     * or -1 if there is no such index.
-     *
-     * @param e element to search for
-     * @param index index to start searching from
-     * @return the index of the first occurrence of the element in
-     *         this list at position {@code index} or later in the list;
-     *         {@code -1} if the element is not found.
-     * @throws IndexOutOfBoundsException if the specified index is negative
+     *	找到就返回对应的下标  没有的就-1
+     *	查找对象的位置 从头开始遍历
+     * @param e 查找的对象
+     * @param index 开始查找的位置
      */
     public int indexOf(E e, int index) {
+    	//指向array
         Object[] elements = getArray();
+        		//查找对象的位置 从index遍历到elements.length
         return indexOf(e, elements, index, elements.length);
     }
 
     /**
-     * {@inheritDoc}
+     * 	找到就返回对应的下标  没有的就-1
+     *	 从elements.length - 1位置开始向前查找
      */
     public int lastIndexOf(Object o) {
+    	//指向array
         Object[] elements = getArray();
+        		// 从elements.length - 1位置开始向前查找
         return lastIndexOf(o, elements, elements.length - 1);
     }
 
     /**
-     * Returns the index of the last occurrence of the specified element in
-     * this list, searching backwards from {@code index}, or returns -1 if
-     * the element is not found.
-     * More formally, returns the highest index {@code i} such that
-     * <tt>(i&nbsp;&lt;=&nbsp;index&nbsp;&amp;&amp;&nbsp;(e==null&nbsp;?&nbsp;get(i)==null&nbsp;:&nbsp;e.equals(get(i))))</tt>,
-     * or -1 if there is no such index.
-     *
-     * @param e element to search for
-     * @param index index to start searching backwards from
-     * @return the index of the last occurrence of the element at position
-     *         less than or equal to {@code index} in this list;
-     *         -1 if the element is not found.
-     * @throws IndexOutOfBoundsException if the specified index is greater
-     *         than or equal to the current size of this list
+     *	找到就返回对应的下标  没有的就-1
+     *	从index位置开始向前查找
+     * @param e 查找的对象
+     * @param index 开始查找的位置
      */
     public int lastIndexOf(E e, int index) {
+    	//指向array
         Object[] elements = getArray();
+        		// 从index位置开始向前查找
         return lastIndexOf(e, elements, index);
     }
 
@@ -312,60 +241,17 @@ public class CopyOnWriteArrayList<E>
     }
 
     /**
-     * Returns an array containing all of the elements in this list
-     * in proper sequence (from first to last element).
-     *
-     * <p>The returned array will be "safe" in that no references to it are
-     * maintained by this list.  (In other words, this method must allocate
-     * a new array).  The caller is thus free to modify the returned array.
-     *
-     * <p>This method acts as bridge between array-based and collection-based
-     * APIs.
-     *
-     * @return an array containing all the elements in this list
+     * copy一个新的对象数组返回
      */
     public Object[] toArray() {
+    	//指向array
         Object[] elements = getArray();
+        //copy一个新的对象数组返回
         return Arrays.copyOf(elements, elements.length);
     }
 
     /**
-     * Returns an array containing all of the elements in this list in
-     * proper sequence (from first to last element); the runtime type of
-     * the returned array is that of the specified array.  If the list fits
-     * in the specified array, it is returned therein.  Otherwise, a new
-     * array is allocated with the runtime type of the specified array and
-     * the size of this list.
-     *
-     * <p>If this list fits in the specified array with room to spare
-     * (i.e., the array has more elements than this list), the element in
-     * the array immediately following the end of the list is set to
-     * {@code null}.  (This is useful in determining the length of this
-     * list <i>only</i> if the caller knows that this list does not contain
-     * any null elements.)
-     *
-     * <p>Like the {@link #toArray()} method, this method acts as bridge between
-     * array-based and collection-based APIs.  Further, this method allows
-     * precise control over the runtime type of the output array, and may,
-     * under certain circumstances, be used to save allocation costs.
-     *
-     * <p>Suppose {@code x} is a list known to contain only strings.
-     * The following code can be used to dump the list into a newly
-     * allocated array of {@code String}:
-     *
-     *  <pre> {@code String[] y = x.toArray(new String[0]);}</pre>
-     *
-     * Note that {@code toArray(new Object[0])} is identical in function to
-     * {@code toArray()}.
-     *
-     * @param a the array into which the elements of the list are to
-     *          be stored, if it is big enough; otherwise, a new array of the
-     *          same runtime type is allocated for this purpose.
-     * @return an array containing all the elements in this list
-     * @throws ArrayStoreException if the runtime type of the specified array
-     *         is not a supertype of the runtime type of every element in
-     *         this list
-     * @throws NullPointerException if the specified array is null
+     * 	copy一个新的T类型的对象数组返回
      */
     @SuppressWarnings("unchecked")
     public <T> T[] toArray(T a[]) {
@@ -381,282 +267,349 @@ public class CopyOnWriteArrayList<E>
         }
     }
 
-    // Positional Access Operations
-
-    @SuppressWarnings("unchecked")
+    /**
+     * 	获取对应下标的数据项
+     * @param a 对象数组
+     * @param index 下标
+     */
     private E get(Object[] a, int index) {
         return (E) a[index];
     }
 
     /**
-     * {@inheritDoc}
-     *
-     * @throws IndexOutOfBoundsException {@inheritDoc}
+     * 	获取array中对应下标的数据
      */
     public E get(int index) {
         return get(getArray(), index);
     }
 
     /**
-     * Replaces the element at the specified position in this list with the
-     * specified element.
-     *
-     * @throws IndexOutOfBoundsException {@inheritDoc}
+     * 	用指定的元素替换此列表中指定位置的元素
+     * @param index 下标
+     * @param element 数据项
      */
     public E set(int index, E element) {
         final ReentrantLock lock = this.lock;
+        //锁住
         lock.lock();
         try {
+        	//指向array
             Object[] elements = getArray();
+            //获取到index位置的旧值
             E oldValue = get(elements, index);
-
+            //旧值不等于新值 
             if (oldValue != element) {
+            	//获取到数组的长度
                 int len = elements.length;
+                //copy复制一个新的数组
                 Object[] newElements = Arrays.copyOf(elements, len);
+                //修改对应下标的值
                 newElements[index] = element;
+                //然后把array指向新的数组 此时就有可能很多读请求获取的到的是旧array获取到了旧数据
                 setArray(newElements);
             } else {
-                // Not quite a no-op; ensures volatile write semantics
+                //不是一定需要的操作;确保易失性写语义
                 setArray(elements);
             }
+            //返回旧值
             return oldValue;
         } finally {
+        	//解锁
             lock.unlock();
         }
     }
 
     /**
-     * Appends the specified element to the end of this list.
-     *
-     * @param e element to be appended to this list
-     * @return {@code true} (as specified by {@link Collection#add})
+     * 	在尾部添加数据
+     * @param e 需要添加的数据
+     * @return true 表示添加成功 false 表示添加失败
      */
     public boolean add(E e) {
         final ReentrantLock lock = this.lock;
+        //锁住
         lock.lock();
         try {
+        	//指向array
             Object[] elements = getArray();
+            //获取到长度
             int len = elements.length;
+            //copy到长度+1的新数组中
             Object[] newElements = Arrays.copyOf(elements, len + 1);
+            //在数组尾部添加数据
             newElements[len] = e;
+            //然后把array指向新的数组 此时就有可能很多读请求获取的到的是旧array获取到了旧数据
             setArray(newElements);
             return true;
         } finally {
+        	//解锁
             lock.unlock();
         }
     }
 
     /**
-     * Inserts the specified element at the specified position in this
-     * list. Shifts the element currently at that position (if any) and
-     * any subsequent elements to the right (adds one to their indices).
-     *
+     *	在指定的下标处添加数据
+     * @param index 下标
+     * @param e 数据项
      * @throws IndexOutOfBoundsException {@inheritDoc}
      */
     public void add(int index, E element) {
         final ReentrantLock lock = this.lock;
+        //锁住
         lock.lock();
         try {
+        	//elements指向array
             Object[] elements = getArray();
+            //获取到长度
             int len = elements.length;
+            //下标大于长度或者小于0 直接抛出异常
             if (index > len || index < 0)
                 throw new IndexOutOfBoundsException("Index: "+index+
                                                     ", Size: "+len);
             Object[] newElements;
+            //用于判断是否要分开copy到新的数组
             int numMoved = len - index;
+            //numMoved说明就是在尾部插入数据
             if (numMoved == 0)
+            	//copy到长度+1的新数组中
                 newElements = Arrays.copyOf(elements, len + 1);
             else {
+            	//新数组的长度+1
                 newElements = new Object[len + 1];
+                //copy两次
+                //先把旧数组的0到index的数据copy到新数组中
                 System.arraycopy(elements, 0, newElements, 0, index);
+                //然后再把旧数组的index后的numMoved个数据copy到新数组从index + 1下标开始的位置
                 System.arraycopy(elements, index, newElements, index + 1,
                                  numMoved);
             }
+            //把对应的下标的数据设置为element
             newElements[index] = element;
+            //array指向newElements
             setArray(newElements);
         } finally {
+        	//释放锁
             lock.unlock();
         }
     }
 
     /**
-     * Removes the element at the specified position in this list.
-     * Shifts any subsequent elements to the left (subtracts one from their
-     * indices).  Returns the element that was removed from the list.
-     *
-     * @throws IndexOutOfBoundsException {@inheritDoc}
+     * 	移除指定下标的数据项 并返回该数据项
+     *	@param index 下标
      */
     public E remove(int index) {
         final ReentrantLock lock = this.lock;
+        //锁住
         lock.lock();
         try {
+        	//elements指向array
             Object[] elements = getArray();
+            //获取数组长度
             int len = elements.length;
+            //获取index位置的旧数据
             E oldValue = get(elements, index);
+            //用于判断是否要分开copy到新的数组
             int numMoved = len - index - 1;
+            //numMoved等于0说明是移除最后一个
             if (numMoved == 0)
+            	//copy到长度-1的新数组中 然后array指向新数组
                 setArray(Arrays.copyOf(elements, len - 1));
             else {
+            	//copy两次
+            	//new一个新数组长度减一
                 Object[] newElements = new Object[len - 1];
+                //先把旧数组的0到index的数据copy到新数组中
                 System.arraycopy(elements, 0, newElements, 0, index);
+                //然后再把旧数组的index + 1后的numMoved个数据copy到新数组从下标index开始的位置
                 System.arraycopy(elements, index + 1, newElements, index,
                                  numMoved);
+                //array指向新数组
                 setArray(newElements);
             }
+            //返回旧值
             return oldValue;
         } finally {
+        	//解锁
             lock.unlock();
         }
     }
 
     /**
-     * Removes the first occurrence of the specified element from this list,
-     * if it is present.  If this list does not contain the element, it is
-     * unchanged.  More formally, removes the element with the lowest index
-     * {@code i} such that
-     * <tt>(o==null&nbsp;?&nbsp;get(i)==null&nbsp;:&nbsp;o.equals(get(i)))</tt>
-     * (if such an element exists).  Returns {@code true} if this list
-     * contained the specified element (or equivalently, if this list
-     * changed as a result of the call).
-     *
-     * @param o element to be removed from this list, if present
-     * @return {@code true} if this list contained the specified element
+     *	移除对象o
+     * @param o 对象
+     * @return true 移除成功 false 移除失败
      */
     public boolean remove(Object o) {
+    	//指向array
         Object[] snapshot = getArray();
+        //查找对象的位置 从index遍历到fence
         int index = indexOf(o, snapshot, 0, snapshot.length);
+        //查找不到直接返回false  
         return (index < 0) ? false : remove(o, snapshot, index);
     }
 
     /**
-     * A version of remove(Object) using the strong hint that given
-     * recent snapshot contains o at the given index.
+     * @param o 数据对象
+     * @param snapshot 可能是过期的对象数组 
+     * @param index 对象在snapshot中的下标 
      */
     private boolean remove(Object o, Object[] snapshot, int index) {
         final ReentrantLock lock = this.lock;
+        //锁住
         lock.lock();
         try {
+        	//current指向array
             Object[] current = getArray();
+            //获取到数组的长度
             int len = current.length;
+            //如果两个不是同一个对象 说明快照过期了
             if (snapshot != current) findIndex: {
+            	//获取到较小的值
                 int prefix = Math.min(index, len);
+                //循环较小的值
                 for (int i = 0; i < prefix; i++) {
+                	//找到相同位置新旧数组中的数据项不相等且删除对象与数据项相等的下标
                     if (current[i] != snapshot[i] && eq(o, current[i])) {
                         index = i;
+                        //找到就直接跳出到findIndex:的位置
                         break findIndex;
                     }
                 }
+                //查找的index大于等于当前array的长度 直接返回false
                 if (index >= len)
                     return false;
+                //当前数组下标index的位置对象正好等于o
                 if (current[index] == o)
                     break findIndex;
+                //获取到对象的真实下标
                 index = indexOf(o, current, index, len);
                 if (index < 0)
                     return false;
             }
+            //新建一个长度减一的数组
             Object[] newElements = new Object[len - 1];
+            //分两次copy
+            //先把当前数组copy[0,index）的数据到新的数组中
             System.arraycopy(current, 0, newElements, 0, index);
+            //再把当前数组copy[index+1,len - 1）的数据到新的数组中
             System.arraycopy(current, index + 1,
                              newElements, index,
                              len - index - 1);
+            //把array指向新数组
             setArray(newElements);
             return true;
         } finally {
+        	//释放锁
             lock.unlock();
         }
     }
 
     /**
-     * Removes from this list all of the elements whose index is between
-     * {@code fromIndex}, inclusive, and {@code toIndex}, exclusive.
-     * Shifts any succeeding elements to the left (reduces their index).
-     * This call shortens the list by {@code (toIndex - fromIndex)} elements.
-     * (If {@code toIndex==fromIndex}, this operation has no effect.)
-     *
-     * @param fromIndex index of first element to be removed
-     * @param toIndex index after last element to be removed
-     * @throws IndexOutOfBoundsException if fromIndex or toIndex out of range
-     *         ({@code fromIndex < 0 || toIndex > size() || toIndex < fromIndex})
+     * 从该列表中删除索引位于两者之间的所有元素
+     * @param fromIndex 开始的下标
+     * @param toIndex 结束的下标
      */
     void removeRange(int fromIndex, int toIndex) {
         final ReentrantLock lock = this.lock;
+        //锁住
         lock.lock();
         try {
+        	//elements指向array
             Object[] elements = getArray();
+            //获取数组长度
             int len = elements.length;
-
+            //下标校验
             if (fromIndex < 0 || toIndex > len || toIndex < fromIndex)
                 throw new IndexOutOfBoundsException();
+            //新的数组长度
             int newlen = len - (toIndex - fromIndex);
+            //用于判断是否要分开copy到新的数组
             int numMoved = len - toIndex;
+            //不用分开copy
             if (numMoved == 0)
+            	//直接一次性移动到新的数组就好了
                 setArray(Arrays.copyOf(elements, newlen));
             else {
+            	//新建数组 长度为newlen
+            	//分两次copy
                 Object[] newElements = new Object[newlen];
+                //先把当前数组copy[0,fromIndex）的数据到新的数组中
                 System.arraycopy(elements, 0, newElements, 0, fromIndex);
+                //再把当前数组copy[toIndex,toIndex+numMoved）的数据到新的数组中
                 System.arraycopy(elements, toIndex, newElements,
                                  fromIndex, numMoved);
+                //把array指向新数组
                 setArray(newElements);
             }
         } finally {
+        	//释放锁
             lock.unlock();
         }
     }
 
     /**
-     * Appends the element, if not present.
-     *
-     * @param e element to be added to this list, if absent
-     * @return {@code true} if the element was added
+     * 添加数据项 如果不存在才添加
+     * @param e  数据项
+     * @return true 添加成功 说明数据项e不存在 添加失败 说明数据项e存在
      */
     public boolean addIfAbsent(E e) {
+    	//snapshot指向array
         Object[] snapshot = getArray();
+        //先在数组中查找如果找到直接返回false
+        //没有找到就添加
         return indexOf(e, snapshot, 0, snapshot.length) >= 0 ? false :
             addIfAbsent(e, snapshot);
     }
 
     /**
-     * A version of addIfAbsent using the strong hint that given
-     * recent snapshot does not contain e.
+     * 
      */
     private boolean addIfAbsent(E e, Object[] snapshot) {
         final ReentrantLock lock = this.lock;
+        //锁住
         lock.lock();
         try {
+        	//current指向当前最新的数组
             Object[] current = getArray();
+            //获取到数组长度
             int len = current.length;
+            //说明snapshot已经是旧数据了
             if (snapshot != current) {
-                // Optimize for lost race to another addXXX operation
+                //获取新旧数组较小长度的那个
                 int common = Math.min(snapshot.length, len);
                 for (int i = 0; i < common; i++)
+                	//
                     if (current[i] != snapshot[i] && eq(e, current[i]))
                         return false;
+                //在最新数组[common,len)存在数据项e直接返回false
                 if (indexOf(e, current, common, len) >= 0)
                         return false;
             }
+            //copy到新的数组中
             Object[] newElements = Arrays.copyOf(current, len + 1);
+            //尾部指向e
             newElements[len] = e;
+            //array指向newElements
             setArray(newElements);
             return true;
         } finally {
+        	//释放锁
             lock.unlock();
         }
     }
 
     /**
-     * Returns {@code true} if this list contains all of the elements of the
-     * specified collection.
-     *
-     * @param c collection to be checked for containment in this list
-     * @return {@code true} if this list contains all of the elements of the
-     *         specified collection
-     * @throws NullPointerException if the specified collection is null
-     * @see #contains(Object)
+     *	判断是否包含集合c中所有的数据项
+     * @param c 集合
+     * @return true 包含所有 false 至少有一个不包含
      */
     public boolean containsAll(Collection<?> c) {
+    	//elements指向array
         Object[] elements = getArray();
+        //获取数组长度
         int len = elements.length;
+        //表里集合
         for (Object e : c) {
+        	//查找对象的位置 返回-1表示没有找到 直接返回false
             if (indexOf(e, elements, 0, len) < 0)
                 return false;
         }
@@ -664,87 +617,89 @@ public class CopyOnWriteArrayList<E>
     }
 
     /**
-     * Removes from this list all of its elements that are contained in
-     * the specified collection. This is a particularly expensive operation
-     * in this class because of the need for an internal temporary array.
-     *
-     * @param c collection containing elements to be removed from this list
-     * @return {@code true} if this list changed as a result of the call
-     * @throws ClassCastException if the class of an element of this list
-     *         is incompatible with the specified collection
-     *         (<a href="../Collection.html#optional-restrictions">optional</a>)
-     * @throws NullPointerException if this list contains a null element and the
-     *         specified collection does not permit null elements
-     *         (<a href="../Collection.html#optional-restrictions">optional</a>),
-     *         or if the specified collection is null
+     *	移除集合c中存在于数组里的数据项
+     * @param c 集合
+     * @return true 有删除 false 没有删除
      * @see #remove(Object)
      */
     public boolean removeAll(Collection<?> c) {
+    	//集合为null直接抛出异常
         if (c == null) throw new NullPointerException();
         final ReentrantLock lock = this.lock;
+        //锁住
         lock.lock();
         try {
+        	//elements指向array
             Object[] elements = getArray();
+            //获取数组长度
             int len = elements.length;
+            //数组长度不为0
             if (len != 0) {
-                // temp array holds those elements we know we want to keep
+            	//用于计算新的数组长度
                 int newlen = 0;
+                //temp数组包含我们想要保留的那些元素 长度设置为当前array的长度
                 Object[] temp = new Object[len];
+                //遍历array
                 for (int i = 0; i < len; ++i) {
                     Object element = elements[i];
+                    //集合中不包含此数据项
                     if (!c.contains(element))
+                    	//就像newlen下标指向element
+                    	//然后newlen+1
                         temp[newlen++] = element;
                 }
+                //array的数组长度不等于newlen
                 if (newlen != len) {
+                	//copy到数组长度为newlen的新数组中
+                	//然后array指向新数组
                     setArray(Arrays.copyOf(temp, newlen));
                     return true;
                 }
             }
             return false;
         } finally {
+        	//释放锁
             lock.unlock();
         }
     }
 
     /**
-     * Retains only the elements in this list that are contained in the
-     * specified collection.  In other words, removes from this list all of
-     * its elements that are not contained in the specified collection.
-     *
-     * @param c collection containing elements to be retained in this list
-     * @return {@code true} if this list changed as a result of the call
-     * @throws ClassCastException if the class of an element of this list
-     *         is incompatible with the specified collection
-     *         (<a href="../Collection.html#optional-restrictions">optional</a>)
-     * @throws NullPointerException if this list contains a null element and the
-     *         specified collection does not permit null elements
-     *         (<a href="../Collection.html#optional-restrictions">optional</a>),
-     *         or if the specified collection is null
-     * @see #remove(Object)
+     *	保留集合c中存在于数组里的数据项
+     * @param c 集合
+     * @return true 有存在 false 没有存在
      */
     public boolean retainAll(Collection<?> c) {
+    	//集合为null直接抛出异常
         if (c == null) throw new NullPointerException();
         final ReentrantLock lock = this.lock;
+        //锁住
         lock.lock();
         try {
             Object[] elements = getArray();
             int len = elements.length;
             if (len != 0) {
-                // temp array holds those elements we know we want to keep
+            	//temp数组包含我们想要保留的那些元素 长度设置为当前array的长度
+            	//用于计算新的数组长度
                 int newlen = 0;
+                //遍历array
                 Object[] temp = new Object[len];
                 for (int i = 0; i < len; ++i) {
                     Object element = elements[i];
+                    //集合中包含此数据项
                     if (c.contains(element))
                         temp[newlen++] = element;
                 }
+                //array的数组长度不等于newlen
                 if (newlen != len) {
+                	//copy到数组长度为newlen的新数组中
+                	//然后array指向新数组
                     setArray(Arrays.copyOf(temp, newlen));
                     return true;
                 }
             }
             return false;
         } finally {
+        	//释放锁
             lock.unlock();
         }
     }
@@ -755,49 +710,64 @@ public class CopyOnWriteArrayList<E>
      * this list, in the order that they are returned by the
      * specified collection's iterator.
      *
-     * @param c collection containing elements to be added to this list
-     * @return the number of elements added
-     * @throws NullPointerException if the specified collection is null
-     * @see #addIfAbsent(Object)
+     * @param c 集合
+     * @return 添加的数据项个数
      */
     public int addAllAbsent(Collection<? extends E> c) {
+    	//集合转成数组
         Object[] cs = c.toArray();
+        //没有数据直接返回0
         if (cs.length == 0)
             return 0;
         final ReentrantLock lock = this.lock;
+        //锁住
         lock.lock();
         try {
+        	//指向array
             Object[] elements = getArray();
+            //获取数组长度
             int len = elements.length;
+            //初始化添加的数据项
             int added = 0;
-            // uniquify and compact elements in cs
+            //遍历cs数组
             for (int i = 0; i < cs.length; ++i) {
                 Object e = cs[i];
+                //array[0, len)没有找到该数据项且cs[ 0, added)也没有找到此数据项
                 if (indexOf(e, elements, 0, len) < 0 &&
                     indexOf(e, cs, 0, added) < 0)
+                	//将cs数组下标为added指向e
+                	//added++
                     cs[added++] = e;
             }
+            //说明有要添加的数据
             if (added > 0) {
+            	//将arraycopy到新的数组中长度为len + added
                 Object[] newElements = Arrays.copyOf(elements, len + added);
+                //然后将cs中的[0,added)的数据copy到newElements中
                 System.arraycopy(cs, 0, newElements, len, added);
+                //array指向newElements
                 setArray(newElements);
             }
+            //返回要添加数据项的数量
             return added;
         } finally {
+        	//释放锁
             lock.unlock();
         }
     }
 
     /**
-     * Removes all of the elements from this list.
-     * The list will be empty after this call returns.
+     * 移除所有的数据项
      */
     public void clear() {
         final ReentrantLock lock = this.lock;
+        //锁住
         lock.lock();
         try {
+        	//array指向一个空数组
             setArray(new Object[0]);
         } finally {
+        	//释放锁
             lock.unlock();
         }
     }
@@ -807,20 +777,23 @@ public class CopyOnWriteArrayList<E>
      * of this list, in the order that they are returned by the specified
      * collection's iterator.
      *
-     * @param c collection containing elements to be added to this list
-     * @return {@code true} if this list changed as a result of the call
-     * @throws NullPointerException if the specified collection is null
-     * @see #add(Object)
+     * @param c 集合
+     * @return true 数组改变 false 数组没有改变
      */
     public boolean addAll(Collection<? extends E> c) {
+    	//看看是不是CopyOnWriteArrayList 是的话可以直接获取到array 否则调用toArray
         Object[] cs = (c.getClass() == CopyOnWriteArrayList.class) ?
             ((CopyOnWriteArrayList<?>)c).getArray() : c.toArray();
+        //数组长度为0直接返回false
         if (cs.length == 0)
             return false;
         final ReentrantLock lock = this.lock;
+        //锁住
         lock.lock();
         try {
+        	//指向array
             Object[] elements = getArray();
+            //获取到数组长度
             int len = elements.length;
             if (len == 0 && cs.getClass() == Object[].class)
                 setArray(cs);
