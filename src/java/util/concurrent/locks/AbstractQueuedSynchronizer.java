@@ -1107,18 +1107,18 @@ public abstract class AbstractQueuedSynchronizer
 
     /**
      * 	条件队列的实现
-     * 	Object.wait只能一个线程调用
-     * 	Condition中可以多线程调用然后排队等待唤醒获取到锁
+     * 	Object中的notify、notifyAll没法唤醒一组特定的阻塞线程，只能唤醒全部中的一个或者全部(获取到锁的线程只有一个)
+     * 	Condition它可以实现唤醒特定的一组线程中的一个线程，对于同一个锁，它可以创建多个Condition，协调控制多组线程
      */
     public class ConditionObject implements Condition, java.io.Serializable {
     	
         private static final long serialVersionUID = 1173984872572414699L;
         /**
-         * 	条件队列的头节点
+         * 	条件队列的头节点指针
          */
         private transient Node firstWaiter;
         /**
-         *	 条件队列的首节点
+         *	 条件队列的尾节点指针
          */
         private transient Node lastWaiter;
 
@@ -1143,6 +1143,7 @@ public abstract class AbstractQueuedSynchronizer
             else
                 t.nextWaiter = node;
             lastWaiter = node;
+            //返回包含当前线程的node
             return node;
         }
 
@@ -1269,8 +1270,7 @@ public abstract class AbstractQueuedSynchronizer
         }
 
         /**
-         * Throws InterruptedException, reinterrupts current thread, or
-         * does nothing, depending on mode.
+         * 
          */
         private void reportInterruptAfterWait(int interruptMode)
             throws InterruptedException {
@@ -1356,71 +1356,71 @@ public abstract class AbstractQueuedSynchronizer
         }
 
         /**
-         * Implements absolute timed condition wait.
-         * <ol>
-         * <li> If current thread is interrupted, throw InterruptedException.
-         * <li> Save lock state returned by {@link #getState}.
-         * <li> Invoke {@link #release} with saved state as argument,
-         *      throwing IllegalMonitorStateException if it fails.
-         * <li> Block until signalled, interrupted, or timed out.
-         * <li> Reacquire by invoking specialized version of
-         *      {@link #acquire} with saved state as argument.
-         * <li> If interrupted while blocked in step 4, throw InterruptedException.
-         * <li> If timed out while blocked in step 4, return false, else true.
-         * </ol>
+         * 固定时间的条件的等待
          */
         public final boolean awaitUntil(Date deadline)
                 throws InterruptedException {
+        	//转成毫秒
             long abstime = deadline.getTime();
+            //线程被标记为中断直接抛出异常
             if (Thread.interrupted())
                 throw new InterruptedException();
+            //添加节点到某个condition的条件队列中
             Node node = addConditionWaiter();
+            //重入次数 完全释放独占锁 
             int savedState = fullyRelease(node);
+            //标记是否超时的
             boolean timedout = false;
             int interruptMode = 0;
+            //node还没有转移到阻塞队列中或者线程被中断都会终止循环
             while (!isOnSyncQueue(node)) {
+            	////超时了
                 if (System.currentTimeMillis() > abstime) {
                     timedout = transferAfterCancelledWait(node);
                     break;
                 }
+                //挂起线程abstime
                 LockSupport.parkUntil(this, abstime);
                 if ((interruptMode = checkInterruptWhileWaiting(node)) != 0)
                     break;
             }
+            //在阻塞队列中了  尝试获取独占锁并设置成之前自己的重入次数 
+            //node.nextWaiter != null 说明是在signal之前中断的
+            //node.nextWaiter == null 说明是在signal之后中断的
             if (acquireQueued(node, savedState) && interruptMode != THROW_IE)
                 interruptMode = REINTERRUPT;
+            //节点的nextWaiter不为null 需要清空取消状态的节点
             if (node.nextWaiter != null)
+            	//从条件队列的头节点遍历 清除状态为取消状态的节点
                 unlinkCancelledWaiters();
+            //等于0说明没有发生中断 不等于0则说明发现了中断
             if (interruptMode != 0)
                 reportInterruptAfterWait(interruptMode);
             return !timedout;
         }
 
         /**
-         * Implements timed condition wait.
-         * <ol>
-         * <li> If current thread is interrupted, throw InterruptedException.
-         * <li> Save lock state returned by {@link #getState}.
-         * <li> Invoke {@link #release} with saved state as argument,
-         *      throwing IllegalMonitorStateException if it fails.
-         * <li> Block until signalled, interrupted, or timed out.
-         * <li> Reacquire by invoking specialized version of
-         *      {@link #acquire} with saved state as argument.
-         * <li> If interrupted while blocked in step 4, throw InterruptedException.
-         * <li> If timed out while blocked in step 4, return false, else true.
-         * </ol>
+         * 固定时间的条件的等待
          */
         public final boolean await(long time, TimeUnit unit)
                 throws InterruptedException {
+        	//转换成纳秒
             long nanosTimeout = unit.toNanos(time);
+            //线程被标记为中断直接抛出异常
             if (Thread.interrupted())
                 throw new InterruptedException();
+            //添加节点到condition的条件队列中
             Node node = addConditionWaiter();
+            //释放当前节点持有的锁
             int savedState = fullyRelease(node);
+            //死亡时间点
             final long deadline = System.nanoTime() + nanosTimeout;
+            //标记是否超时的
             boolean timedout = false;
             int interruptMode = 0;
+            //node还没有转移到阻塞队列中或者线程被中断都会终止循环
             while (!isOnSyncQueue(node)) {
+            	//超时了
                 if (nanosTimeout <= 0L) {
                     timedout = transferAfterCancelledWait(node);
                     break;
@@ -1429,12 +1429,18 @@ public abstract class AbstractQueuedSynchronizer
                     LockSupport.parkNanos(this, nanosTimeout);
                 if ((interruptMode = checkInterruptWhileWaiting(node)) != 0)
                     break;
+                //剩余的等待时间
                 nanosTimeout = deadline - System.nanoTime();
             }
+            //在阻塞队列中了  尝试获取独占锁并设置成之前自己的重入次数 
+            //node.nextWaiter != null 说明是在signal之前中断的
+            //node.nextWaiter == null 说明是在signal之后中断的
             if (acquireQueued(node, savedState) && interruptMode != THROW_IE)
                 interruptMode = REINTERRUPT;
+            //节点的nextWaiter不为null 需要清空取消状态的节点
             if (node.nextWaiter != null)
                 unlinkCancelledWaiters();
+            //等于0说明没有发生中断 不等于0则说明发现了中断
             if (interruptMode != 0)
                 reportInterruptAfterWait(interruptMode);
             return !timedout;
