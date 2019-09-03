@@ -1108,7 +1108,7 @@ public abstract class AbstractQueuedSynchronizer
     /**
      * 	条件队列的实现
      * 	Object中的notify、notifyAll没法唤醒一组特定的阻塞线程，只能唤醒全部中的一个或者全部(获取到锁的线程只有一个)
-     * 	Condition它可以实现唤醒特定的一组线程中的一个线程，对于同一个锁，它可以创建多个Condition，协调控制多组线程
+     * 	独占锁+Condition它可以实现唤醒特定的一组线程中的一个线程，对于同一个锁，它可以创建多个Condition，协调控制多组线程
      */
     public class ConditionObject implements Condition, java.io.Serializable {
     	
