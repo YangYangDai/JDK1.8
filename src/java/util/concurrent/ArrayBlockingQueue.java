@@ -13,8 +13,8 @@ import java.util.Spliterator;
  * 数组阻塞队列
  * 底层：数组+ReentrantLock + notFullCondition + notFullCondition
  * notFullCondition+notFullCondition用的是同一个ReentrantLock
- * 添加的数据不能为null
- * 队列长度是有限制的 
+ * 出队列与入队列是阻塞进行的，某个时间点，只有一个线程能获取到锁，然后生产或者消费数据
+ * 添加的数据不能为null 队列长度是有限制的 
  */
 public class ArrayBlockingQueue<E> extends AbstractQueue<E>
         implements BlockingQueue<E>, java.io.Serializable {
@@ -87,7 +87,9 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
 
     /**
      * 入队列
-     * 在putIndex的位置保存数据
+     * 只有获取到独占锁的线程才能调用该方法
+     * 在putIndex处保存数据 
+     * 唤醒消费者
      */
     private void enqueue(E x) {
     	//获取到数组
@@ -95,23 +97,25 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
         //在下标putIndex的位置保存x
         items[putIndex] = x;
         //如果putIndex+1等于数组的长度的话
-        //就要从头开始存放数据了数组的头下标就是0了
+        //就要从头开始存放数据了 putIndex=0
         if (++putIndex == items.length)
             putIndex = 0;
         //数据个数加1
         count++;
-        //生产了数据 唤醒消费者不为空条件队列中的一个阻塞线程 从队头开始
+        //生产了数据 唤醒消费者(不为空条件队列中的一个阻塞线程) 队头开始唤醒
         notEmpty.signal();
     }
 
     /**
      * 出队列
-     * 下标takeIndex获取数据
+     * 只有获取到独占锁的线程才能调用该方法
+     * 获取takeIndex处的数据
+     * 唤醒生产者
      */
     private E dequeue() {
         final Object[] items = this.items;
         @SuppressWarnings("unchecked")
-        //获取下标takeIndex位置的数据
+        //获取下标takeIndex处的数据
         E x = (E) items[takeIndex];
         //置空
         items[takeIndex] = null;
@@ -125,7 +129,7 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
         //迭代器不为空的 也出队列
         if (itrs != null)
             itrs.elementDequeued();
-        //消费了数据 唤醒生产者不为满条件队列中的一个阻塞线程 从队头开始
+        //消费了数据 唤醒生产者(不为满条件队列中的一个阻塞线程) 队头开始唤醒
         notFull.signal();
         return x;
     }
@@ -152,7 +156,7 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
         } else {
             final int putIndex = this.putIndex;
             //死循环
-            //把数据向putIndex->takeIndex有数据的方向移动
+            //把数据向队头方向移动
             for (int i = removeIndex;;) {
                 int next = i + 1;
                 //next等于数组长度了 next要从0开始
@@ -174,7 +178,7 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
             if (itrs != null)
                 itrs.removedAt(removeIndex);
         }
-       //消费掉了一个 唤醒条件不为满条件队列中的一个 从队头开始
+       //消费掉了一个 唤醒生产者(条件不为满条件队列中的一个) 队头开始唤醒
         notFull.signal();
     }
 
@@ -193,9 +197,13 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
     public ArrayBlockingQueue(int capacity, boolean fair) {
         if (capacity <= 0)
             throw new IllegalArgumentException();
+        //初始化对象数组
         this.items = new Object[capacity];
+        //可重入锁
         lock = new ReentrantLock(fair);
+        //不为空的等待条件：用于控制消费者线程
         notEmpty = lock.newCondition();
+        //没有满的等待条件：用于控制生产者线程
         notFull =  lock.newCondition();
     }
 
@@ -238,15 +246,13 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
      * 入队列
      * 最后调用的是自己的offer(E e) 
      * @param e 要添加的数据
-     * @throws IllegalStateException if this queue is full
-     * @throws NullPointerException if the specified element is null
      */
     public boolean add(E e) {
         return super.add(e);
     }
 
     /**
-     * 入队列
+     * 尝试入队列
      * @return true 添加成功 false 添加失败
      */
     public boolean offer(E e) {
@@ -282,10 +288,10 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
         //获取独占锁 可中断的
         lock.lockInterruptibly();
         try {
-        	//数据的个数如果等数组的长度
+        	//数据的个数等于数组的长度
         	//说明数据已经放满了 放不下了
             while (count == items.length)
-            	//条件不为满生产者等待 等待消费者的唤醒
+            	//生产者线程等待 等待消费者的唤醒
                 notFull.await();
             //入队列 然后唤醒消费者者不为空条件队列中的一个 从队头开始
             enqueue(e);
@@ -304,7 +310,7 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
         throws InterruptedException {
     	//校验数据E 为null直接抛出空指针异常
         checkNotNull(e);
-        //换算成纳闷
+        //换算成纳秒
         long nanos = unit.toNanos(timeout);
         final ReentrantLock lock = this.lock;
         //获取锁
@@ -369,7 +375,8 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
      * @param unit	时间单位
      */
     public E poll(long timeout, TimeUnit unit) throws InterruptedException {
-        long nanos = unit.toNanos(timeout);
+        //转成纳秒
+    	long nanos = unit.toNanos(timeout);
         final ReentrantLock lock = this.lock;
         //获取锁
         lock.lockInterruptibly();
@@ -391,7 +398,7 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
         }
     }
     /**
-     * 获取队头数据
+     * 获取队头数据 
      */
     public E peek() {
         final ReentrantLock lock = this.lock;
