@@ -12,12 +12,12 @@ import java.util.Spliterators;
 import java.util.function.Consumer;
 
 /**
- * 	阻塞队列  2个ReentrantLock + 2个Condition 
- * 	生产和消费数据用的不是同一锁  生产和消费是可以同时进行
- * 	生产者从队尾添加数据  消费者从队头的下一个节点开始获取数据
- * 	消费数据可能会拿到null 它不会去等待生产生产数据
- * 	生产数据达到了容量则生产线程等待
- * 	不允许添加的数据项为null 因为头节点的数据项也为null 到时候不好判断
+ *  线程安全	
+ *  底层实现原理：单项链表 + 2个ReentrantLock + 2个Condition 
+ * 	生产和消费数据用的不是同一独占锁 ，生产和消费是可以同时进行
+ * 	生产者从队尾添加数据 ，消费者从队头的下一个节点开始获取数据
+ * 	生产数据达到了容量则生产线程等待，消费者消费完了数据则消费者线程等待
+ * 	头节点的数据项为null，不允许添加的数据项为null
  */
 public class LinkedBlockingQueue<E> extends AbstractQueue<E>
         implements BlockingQueue<E>, java.io.Serializable {
@@ -50,7 +50,7 @@ public class LinkedBlockingQueue<E> extends AbstractQueue<E>
 
     /**
      * 	头指针
-     * 	不存放数据
+     * 	头节点是不存放数据
      */
     transient Node<E> head;
 
@@ -61,7 +61,6 @@ public class LinkedBlockingQueue<E> extends AbstractQueue<E>
 
     /**
      * 	消费者消费数据时要获取的可重入独占锁
-     *  take, poll, etc
      */
     private final ReentrantLock takeLock = new ReentrantLock();
 
@@ -161,7 +160,7 @@ public class LinkedBlockingQueue<E> extends AbstractQueue<E>
     public LinkedBlockingQueue(int capacity) {
         if (capacity <= 0) throw new IllegalArgumentException();
         this.capacity = capacity;
-        //初始化好头节点不存放数据项
+        //初始化好头节点 不存放数据项
         last = head = new Node<E>(null);
     }
 
