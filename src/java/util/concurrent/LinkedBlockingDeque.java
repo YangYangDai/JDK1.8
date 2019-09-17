@@ -11,12 +11,11 @@ import java.util.Spliterators;
 import java.util.function.Consumer;
 
 /**
- * 	双端阻塞队列 
- * 	双向链表+ReentrantLock + 2个Condition  实现
- * 	生产者和消费者用同一把锁 所以同一时刻只有一个生产者在生产数据或者一个消费者在消费数据
- * 	添加的数据不能为null
- * 	生产数据可以从头或者尾
- * 	消费数据可以从头或者尾
+ * 	双端阻塞队列 线程安全的
+ * 	实现原理：双向链表 + 1个ReentrantLock + 2个Condition
+ * 	生产者和消费者同一把独占锁,同一时刻只有一个线程能获取到锁生产者在生产数据或者一个消费者在消费数据
+ * 	生产的数据不能为null
+ * 	生产者生产数据、消费者消费数据可以从队头或者队尾
  */
 public class LinkedBlockingDeque<E>
     extends AbstractQueue<E>
