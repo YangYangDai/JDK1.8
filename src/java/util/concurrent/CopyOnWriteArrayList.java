@@ -19,9 +19,8 @@ import java.util.function.UnaryOperator;
 import sun.misc.SharedSecrets;
 
 /**
- *  CopyOnWriteArrayList
- * 	array在读操作的时候会被改变 读操作很有可能操作的是旧array
- * 	写操作直接用锁锁住对应的操作 读操作都是不用锁的
+ * 	线程安全
+ * 	增删改操作直接用锁锁住对应的操作，读操作都是不用锁的
  * 	适用于读多写少的场景
  */
 public class CopyOnWriteArrayList<E>
